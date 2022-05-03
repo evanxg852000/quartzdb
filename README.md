@@ -9,3 +9,6 @@ An experimental time series database for learning
 - Apache Arrow: https://docs.rs/arrow/latest/arrow/
 - DataFusion: https://arrow.apache.org/datafusion/index.html
 - https://leanpub.com/how-query-engines-work
+- https://github.com/pola-rs/polars/
+- https://www.pola.rs/
+- https://pola-rs.github.io/polars-book/user-guide/timeseries/intro.html
