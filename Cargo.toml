@@ -3,4 +3,6 @@
 members = [
     "quartz-common",
     "quartz-cli",
+    "quartz-storage",
+    "quartz-tsdb",
 ]
