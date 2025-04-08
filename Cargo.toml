@@ -1,8 +1,35 @@
 [workspace]
+resolver = "2"
 
 members = [
-    "quartz-common",
+    # "fts-lite",
+    "log-store",
     "quartz-cli",
+    "quartz-common",
+    "quartz-index",
+    "quartz-insert",
+    "quartz-log-store",
+    "quartz-select",
     "quartz-storage",
-    "quartz-tsdb",
+    "quartz-ts-store",
 ]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+homepage = "https://quartzdb.github.io/"
+documentation = "https://quartzdb.github.io/docs/"
+repository = "https://github.com/evanxg852000/quartzdb"
+authors = ["Evance Soumaoro, <evanxg852000@gmail.com>"]
+license = "AGPL-3.0"
+
+
+[workspace.dependencies]
+crossbeam = "0.8"
+integer-encoding = "4.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+
+quartz-common ={ path = "quartz-common" }
+quartz-index ={ path = "quartz-index" }

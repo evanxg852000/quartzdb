@@ -1,6 +1,6 @@
 [package]
-name = "quartz-common"
-description = "common code for quartzdb"
+name = "quartz-insert"
+description = "Ingestion node"
 
 version.workspace = true
 edition.workspace = true
@@ -11,5 +11,3 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-polars = { version = "0.46.0", features = ["simd", "parquet"] }
-bincode = "2.0"

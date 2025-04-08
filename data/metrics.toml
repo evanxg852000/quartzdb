@@ -1,0 +1,74 @@
+[sources.dummy_logs]
+type = "demo_logs"
+format = "json"
+interval = 0.01
+
+# Transform logs (optional)
+[transforms.modify_logs]
+type = "remap"
+inputs = ["dummy_logs"]
+source = '''
+locations = ["us-midwest", "us-northeast", "us-south"];
+endpoints = ["/index", "/api", "/login", "/logout"];
+http_methods = ["GET", "POST", "PUT", "DELETE"];
+status_codes = [200, 404, 500, 403, 300];
+
+i = random_int!(0, length(locations));
+location = get!(locations, [i]);
+
+i = random_int!(0, length(endpoints));
+endpoint = get!(endpoints, [i]);
+
+i = random_int!(0, length(http_methods));
+http_method = get!(http_methods, [i]);
+
+i = random_int!(0, length(status_codes));
+status_code = get!(status_codes, [i]);
+
+choice = random_int(1, 5);
+if choice == 1 {
+  . = {
+    "metric": "weather_temperature",
+    "device": "sensor-" + to_string!(random_int(1, 15)),
+    "location": location,
+    "temperature": random_int(50, 100),
+    "timestamp": now()
+  }
+} 
+
+if choice == 2 {
+  . =  {
+    "metric": "weather_humidity",
+    "device": "sensor-" + to_string!(random_int(1, 15)),
+    "location": location,
+    "humidity": random_float(0.0, 1.0),
+    "timestamp": now()
+  };
+}
+
+if choice == 3 {
+  . = {
+    "metric": "server_cpu",
+    "device": "sensor-" + to_string!(random_int(1, 15)),
+    "cpu_usage": random_float(0.0, 1.0),
+    "timestamp": now()
+  };
+}
+
+if choice == 4 {
+  . = {
+    "metric": "server_response_time",
+    "endpoint": endpoint,
+    "request_method": http_method,
+    "status_code": status_code,
+    "response_time": random_int(50, 2000),
+    "timestamp": now()
+  };
+}
+'''
+
+[sinks.file_output]
+type = "file"
+inputs = ["modify_logs"]
+path = "server-metrics.ndjson"
+encoding.codec = "json"
