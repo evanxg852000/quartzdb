@@ -10,6 +10,7 @@ pub enum TimeSeriesDataType {
 
 impl TimeSeriesDataType {
     pub fn infer_from_str_value(value: &str) -> Result<TimeSeriesDataType, String> {
+        //TODO: fast_float::parse
         match value.parse::<f64>() {
             Ok(_) => {
                 match value.parse::<i64>() {

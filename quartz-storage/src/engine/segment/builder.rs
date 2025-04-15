@@ -104,8 +104,6 @@ impl SegmentBuilder {
             }
         }
 
-        // 14" -. 23M ->  $2,653
-        
         
         
         // extract data from batches

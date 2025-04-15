@@ -19,6 +19,7 @@ serde_json = "1.0"
 lru = "0.13"
 parking_lot = "0.12"
 bincode = "2.0"
+fast-float = "0.2"
 
 quartz-common = { workspace = true}
 quartz-index = { workspace = true}

@@ -17,6 +17,7 @@ const DATA_FILE: &str = "data.bin";
 ///
 /// A segment is a immutable part of a collection of metric and log data 
 /// that is stored on disk and can be queried.
+/// it is a directory that contains the following files:
 /// split_ulid/meta.json
 /// split_ulid/index/
 /// split_ulid/data.bin
