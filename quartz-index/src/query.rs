@@ -3,7 +3,7 @@
 
 use std::ops::Bound;
 
-use tantivy::{query::{AllQuery, BooleanQuery, Occur, Query as TantivyQuery, RangeQuery, RegexQuery, TermQuery}, schema::{Field, IndexRecordOption, Schema}, Term};
+use tantivy::{query::{AllQuery, BooleanQuery, Occur, PhraseQuery, Query as TantivyQuery, RangeQuery, RegexQuery, TermQuery}, schema::{Field, IndexRecordOption, Schema}, Term};
 
 use crate::error::IndexError;
 
@@ -62,23 +62,36 @@ impl QueryBuilder {
 #[derive(Debug, Clone)]
 pub enum Filter {
     All, // AllQuery
+    Phrase(String, String, u32), // PhraseQuery
     Equal(String, String), // TermQuery
     StartsWith(String, String), // RangeQuery
-    Contains(String, String),
+    Contains(String, String),   // RegexQuery
     EndsWith(String, String), // RangeQuery
     Regex(String, String), // RegexQuery
-    Not(Box<Filter>),
-    Or(Box<Filter>, Box<Filter>),
-    And(Box<Filter>, Box<Filter>),
-    AnyOf(Vec<Box<Filter>>),
-    AllOf(Vec<Box<Filter>>),
-    NoneOf(Vec<Box<Filter>>),
+    Not(Box<Filter>), // BooleanQuery with MustNot
+    Or(Box<Filter>, Box<Filter>), // BooleanQuery with Should
+    And(Box<Filter>, Box<Filter>), // BooleanQuery with Must
+    AnyOf(Vec<Box<Filter>>), // BooleanQuery with Should
+    AllOf(Vec<Box<Filter>>), // BooleanQuery with Must
+    NoneOf(Vec<Box<Filter>>), // BooleanQuery with MustNot
 }
 
 impl Filter {
     pub fn to_tantivy_query(&self, schema: &Schema) -> Result<Box<dyn TantivyQuery>, IndexError> {
         let query: Box<dyn TantivyQuery> = match self {
             Filter::All => Box::new(AllQuery),
+            Filter::Phrase(field_name, phrase, slop) => {
+                let field = schema.get_field(field_name)?;
+                let terms = phrase.split_whitespace()
+                    .map(|word| Term::from_field_text(field, &word.to_lowercase()))
+                    .collect::<Vec<_>>();
+                if terms.len() <= 1 {
+                    return Err(IndexError::InvalidQuery("A phrase query is required to have more than one term.".to_string()));
+                }
+                let mut phrase_query = PhraseQuery::new(terms);
+                phrase_query.set_slop(*slop);
+                Box::new(phrase_query)
+            },
             Filter::Equal(field_name, value) => {
                 let field = schema.get_field(field_name)?;
                 Box::new(TermQuery::new(Term::from_field_text(field, value), IndexRecordOption::Basic))
@@ -151,6 +164,14 @@ impl Filter {
 
 pub fn all() -> Filter {
     Filter::All
+}
+
+pub fn phrase(field: &str, phrase: &str) -> Filter {
+    Filter::Phrase(field.to_string(), phrase.to_string(), 0)
+}
+
+pub fn phrase_with_slop(field: &str, phrase: &str, slop: u32) -> Filter {
+    Filter::Phrase(field.to_string(), phrase.to_string(), slop)
 }
 
 pub fn eq(field: &str, value: &str) -> Filter {
