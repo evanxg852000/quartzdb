@@ -1,0 +1,17 @@
+[package]
+name = "quartz-data-model"
+description = "data model code for quartzdb"
+
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+arrow = "55.0"
+datafusion = "46.0"
+polars = { version = "0.46", features = ["simd", "parquet"] }
+bincode = "2.0"

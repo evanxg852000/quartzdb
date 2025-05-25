@@ -6,6 +6,7 @@ members = [
     "log-store",
     "quartz-cli",
     "quartz-common",
+    "quartz-data-model",
     "quartz-index",
     "quartz-insert",
     "quartz-log-store",

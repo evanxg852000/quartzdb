@@ -1,6 +1,12 @@
 # QuartzDB
 An experimental time series database for learning
 
+TODO:
+- FtsIndex
+- FsStorage
+- QInsert/QStorage/QSelect
+
+- ClickHouse Storage
 
 ## References
 

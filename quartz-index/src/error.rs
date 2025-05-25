@@ -20,6 +20,8 @@ pub enum IndexError {
     QueryNotSupported,
     #[error("IndexWriter error")]
     TantivyError(#[from] tantivy::TantivyError),
+    #[error("QueryParserError error")]
+    QueryParserError(#[from] tantivy::query::QueryParserError),
 
     #[error("IndexReader error")]
     IndexReader,

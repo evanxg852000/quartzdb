@@ -12,7 +12,8 @@ license.workspace = true
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
-tantivy = "0.22.0"
+tantivy = "0.24.1"
+regex = "1.11.1"
 tantivy-fst = "0.5.0"
 levenshtein_automata = "0.2.1"
 serde = {version = "1.0.140", features = ["derive"]}
