@@ -1,6 +1,6 @@
 [package]
 name = "quartz-insert"
-description = "Ingestion node"
+description = "ingestion node"
 
 version.workspace = true
 edition.workspace = true
@@ -11,3 +11,5 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+axum = {workspace = true}
+anyhow = {workspace = true}

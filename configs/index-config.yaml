@@ -1,0 +1,41 @@
+name: github_events
+
+config:
+  timestamp: created_at # always nanosecond precision
+
+  # all fields in labels are indexed in FTS and inverted index.
+  # should endup in schemaless tantivy index
+  labels:
+    - type
+    - actor.login
+    - repo.name
+    - message
+
+  # All fields here are attached to split as bloom_filters
+  # for split prunning.
+  tags: 
+    - actor.login #JSON Path
+    - repo.name
+
+  # all fields here are mandatory and will be a top-level parquet column.
+  fields: 
+    - name: energy.level #JSON Path
+      type: string
+    - name: size
+      type: int
+    - name: temperature
+      type: float
+
+settings:
+  storage:
+    type: remote
+    bucket: s3://mi.io/my-bucket
+  search:
+    todo: TODO
+  ingest:
+    batch_size: 1000
+    commit_timeout_secs: 5000
+  retention:
+    period: "90 days"
+    schedule: daily
+

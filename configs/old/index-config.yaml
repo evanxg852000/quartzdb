@@ -1,0 +1,39 @@
+indexId: github_events
+
+# strict -> all fields must be defined in the config, 
+# dynamic -> fields not defined in the config will 
+# be accepted:
+#   all string fields treated as body FTS searchable,
+#   all numeric fields treated as f64 metrics
+
+mode: dynamic # strict
+body: # always large string
+  - message
+labels: # always string
+  - type
+  - actor.login
+  - repo.name
+metrics:
+  - name: level
+    type: string
+  - name: size
+    type: int
+  - name: temperature
+    type: float
+
+timestamp: created_at # always nanosecond precision
+
+split_fields: # fields attached to split bloom_filters
+  - actor.login
+  - repo.name
+
+
+# string/f64/i64
+# - `_body` list of fields that are FTS searchable, default to all string fields that are not labels (logs)
+# - `_timestamp` field (logs/metrics)
+# - `_labels` list of fields that are indexed as labels into an inverted index
+# - `_metrics` list of fields that are extracted as metric data
+# - `_stream_fields` list of fields that are extracted for composing the `series_id` or `log_stream_id`
+# - The default behavior when `_labels` are not specified is to use all string fields as label
+# - The default behavior when `_metrics` are not specified is to use all number fields as metrics
+# - The default behavior when `_stream_fields` are not specified is to use all string fields as `series_id`
