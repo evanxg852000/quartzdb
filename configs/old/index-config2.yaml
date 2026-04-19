@@ -1,0 +1,60 @@
+name: github_events
+
+config:
+  timestamp: created_at # always nanosecond precision
+
+  # all fields in labels are indexed in FTS and inverted index.
+  # should endup in schemaless tantivy index
+  labels:
+    - type
+    - actor.login
+    - repo.name
+    - message
+
+  # All fields here are attached to split as bloom_filters
+  # for split prunning.
+  tags: 
+    - actor.login
+    - repo.name
+
+  # all fields here are mandatory and will be a parquet column.
+  fields: 
+    - name: level
+      type: string
+    - name: size
+      type: int
+    - name: temperature
+      type: float
+
+settigs:
+  bloom_filter_fpp: 0.01
+  search:
+    top_k: 100
+    timeout_ms: 1000
+  ingest:
+    batch_size: 1000
+    flush_interval_ms: 5000
+  retention:
+    ttl_days: 30
+
+# -----
+# how it should look like in parquet
+# parquet:
+# _source: JSON(binary) -> BSON
+# _timestamp: created_at
+# field1: int
+# field2: string
+# field3: float
+
+#  ---------------
+
+
+# string/f64/i64
+# - `_body` list of fields that are FTS searchable, default to all string fields that are not labels (logs)
+# - `_timestamp` field (logs/metrics)
+# - `_labels` list of fields that are indexed as labels into an inverted index
+# - `_metrics` list of fields that are extracted as metric data
+# - `_stream_fields` list of fields that are extracted for composing the `series_id` or `log_stream_id`
+# - The default behavior when `_labels` are not specified is to use all string fields as label
+# - The default behavior when `_metrics` are not specified is to use all number fields as metrics
+# - The default behavior when `_stream_fields` are not specified is to use all string fields as `series_id`
