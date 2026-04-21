@@ -30,6 +30,9 @@ axum = { workspace = true }
 reqwest = { workspace = true }
 url = { workspace = true }
 object_store = { workspace = true }
+datafusion = { workspace = true }
+tantivy = { workspace = true }
+json_dotpath = { workspace = true }
 
 
 [build-dependencies]

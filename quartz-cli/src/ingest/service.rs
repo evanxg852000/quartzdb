@@ -1,21 +1,50 @@
-use anyhow::Ok;
 
-use crate::ingest::client::InsertServiceClient;
 
-pub type MessageSender = tokio::sync::mpsc::Sender<Vec<u8>>;
+use anyhow::{Result};
+use hashbrown::HashMap;
+use tokio::task::JoinHandle;
+use tokio::sync::{oneshot::{self}, mpsc::{self}};
+
+use crate::ingest::doc_processor::BatchRequest;
+use crate::ingest::{client::InsertServiceClient, doc_processor::DocProcessor};
+
+
+pub type BatchRequestSender = mpsc::Sender<BatchRequest>;
 
 pub struct InsertService{
-    sender: Option<MessageSender>,
+    sender: Option<BatchRequestSender>,
+    join_handle: Option<JoinHandle<Result<()>>>,
+    processors: HashMap<String, DocProcessor>
 }
 
 impl InsertService {
     pub fn new() -> Self {
-        InsertService { sender: None }
+        InsertService { 
+            sender: None,
+            join_handle: None,
+            processors: HashMap::new(),
+        }
     }
 
-    pub async fn start(&mut self) -> anyhow::Result<()> {
-        let (tx, _) = tokio::sync::mpsc::channel(500);
+    pub async fn start(&mut self) -> Result<()> {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(500);
         self.sender = Some(tx.clone());
+
+        let handle = tokio::spawn(async move {
+            loop {
+                //TODO: use tokio::select! for graceful shutdown
+                let batch_request_opt = rx.recv().await;
+                match batch_request_opt {
+                    Some(batch_request) => {
+                        let processor = DocProcessor::new();
+                        processor.process_batch(batch_request).await?;
+                    },
+                    None => break,
+                }
+            }
+            Ok(())
+        });
+        self.join_handle = Some(handle);
         Ok(())
     }
 

@@ -3,28 +3,45 @@
 use url::Url;
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]  
+pub struct FieldName(String); //JSON Path that escape dot if needed
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Hash)]  
+impl FieldName {
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]  
 #[serde(rename_all = "lowercase")]
 pub enum FieldType {
     String,
     Int,
     Float,
+    Bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]  
+pub enum FieldValue {
+    String(String),
+    Int(i64),
+    Float(f64),
+    Bool(bool),
 }
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct FieldConfig {
-    pub name: String, //JSON Path that escape dot if needed
+    pub name: FieldName,
     #[serde(rename = "type")]
     pub field_type: FieldType,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct IndexConfig {
-    pub timestamp: String,
-    pub labels: Vec<String>,
-    pub tags: Vec<String>,
+    pub timestamp: FieldName,
+    pub labels: Vec<FieldName>,
+    pub tags: Vec<FieldName>,
     pub fields: Vec<FieldConfig>,
 }
 
