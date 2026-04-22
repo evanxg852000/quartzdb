@@ -9,12 +9,12 @@ use axum::{
     Json, Router,
     extract::{Path, State},
     http::StatusCode,
-    routing::{delete, get, post},
+    routing::{delete, get, put},
 };
 
 pub fn setup_web_routes(metastore_client: MetastoreClient) -> Router {
     Router::new()
-        .route("/metastore/indexes", post(handle_create_index))
+        .route("/metastore/indexes", put(handle_put_index))
         .route("/metastore/indexes", get(handle_list_indexes))
         .route(
             "/metastore/indexes/{index_name}",
@@ -23,12 +23,12 @@ pub fn setup_web_routes(metastore_client: MetastoreClient) -> Router {
         .with_state(metastore_client)
 }
 
-async fn handle_create_index(
+async fn handle_put_index(
     State(state): State<MetastoreClient>,
     Json(index_meta): Json<IndexMeta>,
 ) -> Result<ApiOk<()>, ApiError> {
     state
-        .create_index(index_meta)
+        .put_index(index_meta)
         .await
         .map_err(|err| ApiResponse::error(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(ApiResponse::ok("OK", None))

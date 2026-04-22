@@ -35,25 +35,4 @@ impl InsertServiceClient {
         self.mailbox.send(request).await?;
         Ok(rx.await?)
     }
-
-    pub async fn put_index(&self, index_name: String, index_config: IndexConfig) -> Result<()> {
-        let (tx, rx) = oneshot::channel();
-        let request = InsertServiceCommand::PutIndex {
-            index_name,
-            index_config,
-            reply_sender: tx,
-        };
-        self.mailbox.send(request).await?;
-        Ok(rx.await?)
-    }
-
-    pub async fn delete_index(&self, index_name: String) -> Result<()> {
-        let (tx, rx) = oneshot::channel();
-        let request = InsertServiceCommand::DeleteIndex {
-            index_name,
-            reply_sender: tx,
-        };
-        self.mailbox.send(request).await?;
-        Ok(rx.await?)
-    }
 }
