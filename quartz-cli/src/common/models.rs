@@ -1,5 +1,7 @@
 use axum::{
-    Json, http::{self, StatusCode}, response::{IntoResponse, Response}
+    Json,
+    http::{self, StatusCode},
+    response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +22,6 @@ impl ApiResponse {
         }
     }
 }
-
 
 #[derive(Serialize, Deserialize)]
 pub struct ApiOk<T> {

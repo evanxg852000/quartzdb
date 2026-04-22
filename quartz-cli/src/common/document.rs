@@ -1,11 +1,13 @@
 use std::vec;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Document {
-    pub line_number: usize,
-    pub json_value: serde_json::Value,
+    pub id: u64,
+    pub line_number: u64,
+    pub json_value: JsonValue,
     pub raw_size: usize,
 }
 
@@ -21,15 +23,17 @@ impl DocumentBatch {
         Self(Vec::with_capacity(capacity))
     }
 
-    pub fn add_document(&mut self, document: Document) {
-        self.0.push(document);
+    pub fn add_document(&mut self, value: JsonValue, size: usize) {
+        let next = self.0.len() as u64 + 1;
+        self.0.push(Document {
+            id: next,
+            line_number: next,
+            json_value: value,
+            raw_size: size,
+        });
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
     }
 }
-
-
-
-

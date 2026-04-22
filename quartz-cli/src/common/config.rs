@@ -3,10 +3,8 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::metastore::config::MetastoreConfig;
 use crate::ingest::config::IngestConfig;
-
-
+use crate::metastore::config::MetastoreConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuartzConfig {

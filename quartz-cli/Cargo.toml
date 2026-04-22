@@ -33,6 +33,8 @@ object_store = { workspace = true }
 datafusion = { workspace = true }
 tantivy = { workspace = true }
 json_dotpath = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
 
 
 [build-dependencies]

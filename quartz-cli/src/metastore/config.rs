@@ -3,9 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MetastoreType {
     Local,
-    Postgres{
-        connection_string: String,
-    },
+    Postgres { connection_string: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

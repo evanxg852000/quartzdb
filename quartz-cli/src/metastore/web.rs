@@ -1,31 +1,34 @@
 use crate::{
     common::{
         index::IndexMeta,
-        models::{ApiOk, ApiError, ApiResponse},
+        models::{ApiError, ApiOk, ApiResponse},
     },
     metastore::client::MetastoreClient,
 };
 use axum::{
-    Json, Router, 
-    extract::{Path, State}, 
-    http::StatusCode, 
+    Json, Router,
+    extract::{Path, State},
+    http::StatusCode,
     routing::{delete, get, post},
 };
-
 
 pub fn setup_web_routes(metastore_client: MetastoreClient) -> Router {
     Router::new()
         .route("/metastore/indexes", post(handle_create_index))
         .route("/metastore/indexes", get(handle_list_indexes))
-        .route("/metastore/indexes/{index_name}", delete(handle_delete_index))
-        .with_state(metastore_client)    
+        .route(
+            "/metastore/indexes/{index_name}",
+            delete(handle_delete_index),
+        )
+        .with_state(metastore_client)
 }
 
 async fn handle_create_index(
     State(state): State<MetastoreClient>,
     Json(index_meta): Json<IndexMeta>,
 ) -> Result<ApiOk<()>, ApiError> {
-    state.create_index(index_meta)
+    state
+        .create_index(index_meta)
         .await
         .map_err(|err| ApiResponse::error(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(ApiResponse::ok("OK", None))
@@ -34,7 +37,8 @@ async fn handle_create_index(
 async fn handle_list_indexes(
     State(state): State<MetastoreClient>,
 ) -> Result<ApiOk<Vec<IndexMeta>>, ApiError> {
-    let indexes = state.list_indexes()
+    let indexes = state
+        .list_indexes()
         .await
         .map_err(|err| ApiResponse::error(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(ApiResponse::ok("OK", Some(indexes)))
@@ -44,10 +48,9 @@ async fn handle_delete_index(
     Path(index_name): Path<String>,
     State(state): State<MetastoreClient>,
 ) -> Result<ApiOk<()>, ApiError> {
-    state.delete_index(&index_name) 
+    state
+        .delete_index(&index_name)
         .await
         .map_err(|err| ApiResponse::error(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(ApiResponse::ok("OK", None))
 }
-
-

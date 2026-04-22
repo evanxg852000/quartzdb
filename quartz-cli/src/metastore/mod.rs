@@ -1,5 +1,6 @@
-mod local;
 pub mod client;
-pub mod web;
-pub mod service;
 pub mod config;
+pub mod events;
+mod local;
+pub mod service;
+pub mod web;

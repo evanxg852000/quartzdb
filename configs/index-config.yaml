@@ -13,7 +13,7 @@ config:
     - message
 
   # All fields here are attached to split as bloom_filters
-  # for split prunning. [mandatory in doc]
+  # for split prunning. [not mandatory in doc]
   tags: 
     - actor.login
     - repo.name

@@ -2,6 +2,6 @@ use quartz_cli::run_cli;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-  run_cli().await?;
-  Ok(())
+    run_cli().await?;
+    Ok(())
 }
