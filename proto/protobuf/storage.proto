@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package quartzdb;
+
+import "quartzdb.proto";
+
+
+// The storage service gRPC definition
+service StorageService {
+  // sends a proto DocumentBatch
+  rpc PutBatch (PutBatchRequest) returns (PutBatchReply);
+}
+
+message PutBatchRequest {
+  ProtoDocumentBatch batch = 1;
+}
+
+message PutBatchReply {
+  string message = 1;
+}

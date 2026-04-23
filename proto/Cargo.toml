@@ -1,0 +1,23 @@
+[package]
+name = "proto"
+description = "A search storage engine for log and traces"
+
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+serde_json = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+tonic = { workspace = true }
+tonic-reflection = { workspace = true }
+
+
+[build-dependencies]
+prost-build = { workspace = true }
+tonic-build = { workspace = true }

@@ -1,0 +1,32 @@
+name: logs
+
+config:
+  timestamp: timestamp
+  labels:
+    - hostname
+    - service
+  tags: 
+    - host
+  fields: 
+    - name: appname
+      type: string
+    - name: facility
+      type: string
+    - name: version
+      type: int
+    - name: severity
+      type: string
+
+settings:
+  storage:
+    type: remote
+    bucket: s3://mi.io/my-bucket
+  search:
+    todo: TODO
+  ingest:
+    batch_size: 1000
+    commit_timeout_secs: 5000
+  retention:
+    period: "90 days"
+    schedule: daily
+
