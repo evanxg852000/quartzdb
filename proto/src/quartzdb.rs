@@ -37,6 +37,42 @@ impl FieldValue {
             kind: Some(Kind::BoolVal(v)),
         }
     }
+    
+    pub fn as_u64(&self) -> Option<u64> {
+        match self.kind {
+            Some(Kind::UintVal(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_i64(&self) -> Option<i64> {
+        match self.kind {
+            Some(Kind::IntVal(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_f64(&self) -> Option<f64> {
+        match self.kind {
+            Some(Kind::FloatVal(v)) => Some(v),
+            _ => None,
+        }
+    }
+
+    pub fn as_string(&self) -> Option<String> {
+        match &self.kind {
+            Some(Kind::StringVal(v)) => Some(v.clone()),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match self.kind {
+            Some(Kind::BoolVal(v)) => Some(v),
+            _ => None,
+        }
+    }
+
 }
 
 impl ProtoDocument {

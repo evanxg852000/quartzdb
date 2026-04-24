@@ -1,12 +1,16 @@
 use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
-use proto::quartzdb::ProtoDocumentBatch;
+use datafusion::arrow::array::{ArrayRef, BooleanArray, Float64Array, Int64Array, LargeStringArray, LargeStringBuilder, RecordBatch, StringArray, TimestampNanosecondBuilder, UInt64Array, UInt64Builder};
+use datafusion::parquet::arrow::AsyncArrowWriter;
+use proto::quartzdb::{FieldValue, ProtoDocumentBatch};
 use tokio::sync::oneshot;
+use tantivy::doc;
 
+use crate::common::index::FieldType;
 use crate::{
-    common::{index::IndexConfig, processors::Processor},
-    storage::storage_impl::StorageImpl,
+    common::{index::IndexConfig, processors::Processor, schema::{QUARTZDB_ID_FIELD_NAME, QUARTZDB_VALUE_FIELD_NAME, Schema}},
+    storage::{self, storage_impl::StorageImpl},
 };
 
 #[derive(Debug, Clone)]
@@ -51,13 +55,86 @@ impl BatchProcessor {
 }
 
 async fn put_batch(
-    _storage: Arc<StorageImpl>,
+    storage: Arc<StorageImpl>,
     index_name: String,
-    _index_config: &IndexConfig,
-    _batch: ProtoDocumentBatch,
+    index_config: &IndexConfig,
+    batch: ProtoDocumentBatch,
 ) -> Result<()> {
     //TODO: perform the parquet & tantivy magic
     println!("Storing split for {}", index_name);
+
+    let index_dir = storage.directory
+        .join(index_name);
+    tokio::fs::create_dir_all(&index_dir.join("index")).await?;
+
+    // tantivy
+    let fts_schema =Schema::get_fts_schema();
+    let index = tantivy::Index::create_in_dir(index_dir.join("index"), fts_schema.clone());
+    if let Err(err) = &index {
+        println!("{}", err.to_string());
+    }
+    let index = index?;
+    println!("index created");
+    let mut index_writer = index.writer(50_000_000)?;
+    let id_field = fts_schema.get_field(QUARTZDB_ID_FIELD_NAME).unwrap();
+    let obj_field = fts_schema.get_field(QUARTZDB_VALUE_FIELD_NAME).unwrap();
+    for proto_doc in &batch.documents {
+        index_writer.add_document(tantivy::doc!(
+            id_field => proto_doc.id,
+            obj_field => proto_doc.labels,
+        )).unwrap();
+    }
+    index_writer.commit().unwrap();
+    println!("end tantivy index");
+    
+    //parquet
+    let data_schema = Schema::get_primary_schema(index_config);
+    let capacity = batch.documents.len();
+    let mut ids_builder = UInt64Builder::with_capacity(capacity);
+    let mut timestamps_builder = TimestampNanosecondBuilder::with_capacity(capacity).with_timezone("UTC");
+    let mut sources_builder = LargeStringBuilder::with_capacity(capacity, capacity*200);
+
+    let num_dynamic_columns = index_config.fields.len();
+    let dynamic_colums_types = index_config.fields.iter().map(|f|f.field_type).collect::<Vec<_>>();
+    let mut dynamic_columns: Vec<Vec<FieldValue>> = Vec::with_capacity(num_dynamic_columns);
+    for _ in 0..num_dynamic_columns {
+        dynamic_columns.push(Vec::with_capacity(capacity));
+    }
+
+    // build columnar values
+    for proto_doc in batch.documents {
+        ids_builder.append_value(proto_doc.id);
+        timestamps_builder.append_value(proto_doc.timestamp);
+        sources_builder.append_value(proto_doc.source);
+
+        // put all columns values toghether
+        for (i, v) in proto_doc.values.into_iter().enumerate() {
+            dynamic_columns[i].push(v);
+        }
+    }
+
+    let mut column_data: Vec<ArrayRef> = vec![
+            Arc::new(ids_builder.finish()),
+            Arc::new(timestamps_builder.finish()),
+            Arc::new(sources_builder.finish()),
+    ];
+    for (i, dynamic_column) in dynamic_columns.into_iter().enumerate() {
+        let column_array: ArrayRef = match &dynamic_colums_types[i] {
+            FieldType::Uint => Arc::new(UInt64Array::from_iter(dynamic_column.into_iter().map(|fv| fv.as_u64()))),
+            FieldType::Int => Arc::new(Int64Array::from_iter(dynamic_column.into_iter().map(|fv| fv.as_i64()))),
+            FieldType::Float => Arc::new(Float64Array::from_iter(dynamic_column.into_iter().map(|fv| fv.as_f64()))),
+            FieldType::String => Arc::new(StringArray::from_iter(dynamic_column.into_iter().map(|fv| fv.as_string()))),
+            FieldType::Bool => Arc::new(BooleanArray::from_iter(dynamic_column.into_iter().map(|fv| fv.as_bool()))),
+        };
+        column_data.push(column_array);
+    }
+
+    let batch = RecordBatch::try_new(data_schema, column_data).unwrap();
+    let file = tokio::fs::File::create(index_dir.join("data.parquet")).await?;
+    let mut writer = AsyncArrowWriter::try_new(file, batch.schema(), None)?;
+    writer.write(&batch).await?;
+    writer.close().await?;
+
 
     // build the split in temporary scratch folder
 

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::{Result, anyhow};
 use datafusion::common::arrow::datatypes::{self as datafusion_schema};
 use jiff::Timestamp;
@@ -12,10 +14,10 @@ use crate::common::{
     index::{FieldType, IndexConfig},
 };
 
-const QUARTZDB_ID_FIELD_NAME: &'static str = "__qtz_id";
-const QUARTZDB_VALUE_FIELD_NAME: &'static str = "__qtz_value";
-const QUARTZDB_TIMESTAMP_FIELD_NAME: &'static str = "__qtz_timestamp";
-const QUARTZDB_SOURCE_FIELD_NAME: &'static str = "__qtz_source";
+pub const QUARTZDB_ID_FIELD_NAME: &'static str = "__qtz_id";
+pub const QUARTZDB_VALUE_FIELD_NAME: &'static str = "__qtz_value";
+pub const QUARTZDB_TIMESTAMP_FIELD_NAME: &'static str = "__qtz_timestamp";
+pub const QUARTZDB_SOURCE_FIELD_NAME: &'static str = "__qtz_source";
 
 //TODO: Future
 // add support for lance format
@@ -24,7 +26,7 @@ const QUARTZDB_SOURCE_FIELD_NAME: &'static str = "__qtz_source";
 pub struct Schema {}
 
 impl Schema {
-    pub fn get_primary_schema(index_config: &IndexConfig) -> datafusion_schema::Schema {
+    pub fn get_primary_schema(index_config: &IndexConfig) -> Arc<datafusion_schema::Schema> {
         let capacity = index_config.fields.len() + 3;
         let mut fields = Vec::with_capacity(capacity);
         fields.push(datafusion_schema::Field::new(
@@ -48,15 +50,16 @@ impl Schema {
 
         for field in index_config.fields.iter() {
             let arrow_type = match field.field_type {
-                FieldType::String => datafusion_schema::DataType::Utf8,
+                FieldType::Uint => datafusion_schema::DataType::UInt64,
                 FieldType::Int => datafusion_schema::DataType::Int64,
                 FieldType::Float => datafusion_schema::DataType::Float64,
                 FieldType::Bool => datafusion_schema::DataType::Boolean,
+                FieldType::String => datafusion_schema::DataType::Utf8,
             };
             let arrow_field = datafusion_schema::Field::new(field.name.as_str(), arrow_type, true);
             fields.push(arrow_field);
         }
-        datafusion_schema::Schema::new(fields)
+        Arc::new(datafusion_schema::Schema::new(fields))
     }
 
     pub fn get_fts_schema() -> tantivy_schema::Schema {

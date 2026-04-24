@@ -7,8 +7,8 @@ struct ColumnStore {
 #[derive(Debug)]
 pub struct Split {
     split_meta: SplitMeta,
-    column_store: SessionContext
-    fst_index: tantivy::Index,
+    // column_store: SessionContext
+    // fst_index: tantivy::Index,
 
 
 }

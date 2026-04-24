@@ -42,13 +42,14 @@ impl FieldName {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FieldType {
-    String,
+    Uint,
     Int,
     Float,
     Bool,
+    String,
 }
 
 // #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

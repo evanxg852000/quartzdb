@@ -7,7 +7,7 @@ const STORAGE_DIR: &str = "storage";
 
 #[derive(Debug)]
 pub struct StorageImpl {
-    directory: PathBuf,
+    pub directory: PathBuf,
 }
 
 impl StorageImpl {
