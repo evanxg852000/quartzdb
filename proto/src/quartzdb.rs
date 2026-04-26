@@ -77,7 +77,6 @@ impl FieldValue {
 
 impl ProtoDocument {
     pub fn new(
-        id: u64,
         timestamp: i64,
         source: String,
         values: Vec<FieldValue>,
@@ -85,7 +84,6 @@ impl ProtoDocument {
         tags: Vec<String>,
     ) -> Self {
         Self {
-            id,
             timestamp,
             source,
             values,
@@ -116,5 +114,9 @@ impl ProtoDocumentBatch {
 
     pub fn len(&self) -> usize {
         self.documents.len()
+    }
+
+    pub fn sort(&mut self) {
+        self.documents.sort_by_key(|doc|doc.timestamp);
     }
 }

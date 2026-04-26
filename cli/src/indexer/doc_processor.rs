@@ -10,7 +10,7 @@ use crate::common::{
     document::{Document, DocumentBatch},
     index::IndexConfig,
 };
-use crate::storage::client::StorageServiceClient;
+use crate::storer::client::StorerServiceClient;
 
 use proto::quartzdb::{ProtoDocument, ProtoDocumentBatch};
 
@@ -68,7 +68,7 @@ pub enum DocProcessorPolicy {
 pub struct DocProcessor {
     index_name: String,
     index_config: Arc<IndexConfig>,
-    storage_client: StorageServiceClient,
+    storage_client: StorerServiceClient,
 }
 
 impl Processor for DocProcessor {}
@@ -77,7 +77,7 @@ impl DocProcessor {
     pub fn new(
         index_name: String,
         index_config: Arc<IndexConfig>,
-        storage_client: StorageServiceClient,
+        storage_client: StorerServiceClient,
     ) -> Self {
         Self {
             index_name,
@@ -125,6 +125,7 @@ fn process_batch(
             Err(err) => report.add_error(err),
         }
     }
+    proto_batch.sort(); // IMPORTANT
 
     if matches!(policy, DocProcessorPolicy::Strict) && report.has_error() {
         report.accepted = false
@@ -137,7 +138,6 @@ fn process_document(
     index_config: &IndexConfig,
     document: Document,
 ) -> Result<ProtoDocument, ValidationError> {
-    let id = document.id;
     let timestamp = Schema::extract_timestamp(index_config, &document)
         .map_err(|err| ValidationError::new(&document, err.to_string()))?;
     let source = document.json_object.to_string();
@@ -149,7 +149,6 @@ fn process_document(
     let tags = Schema::extract_tag_values(index_config, &document)
         .map_err(|err| ValidationError::new(&document, err.to_string()))?;
     Ok(ProtoDocument {
-        id,
         timestamp,
         source,
         values,

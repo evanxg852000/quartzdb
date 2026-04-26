@@ -1,7 +1,8 @@
 pub mod cli;
 pub mod common;
-pub mod ingest;
 pub mod metastore;
-pub mod storage;
+pub mod indexer;
+pub mod storer;
+pub mod searcher;
 
 pub use cli::run_cli;

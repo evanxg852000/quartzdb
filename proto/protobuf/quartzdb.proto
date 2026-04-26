@@ -13,8 +13,6 @@ message FieldValue {
 }
 
 message ProtoDocument {
-    // document local id
-    uint64 id = 1;
     // timestamp in nanoseconds precision
     int64 timestamp = 2;
     // source document as json string

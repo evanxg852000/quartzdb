@@ -14,13 +14,13 @@ use crate::{
         document::DocumentBatch,
         models::{ApiError, ApiOk, ApiResponse},
     },
-    ingest::{
-        client::IngestServiceClient,
+    indexer::{
+        client::IndexerServiceClient,
         doc_processor::{DocProcessorPolicy, ProcessingReport},
     },
 };
 
-pub fn setup_web_routes(service_client: IngestServiceClient) -> Router {
+pub fn setup_web_routes(service_client: IndexerServiceClient) -> Router {
     // PUT: /api/v1/ingest/{protocol}
     // - protocol: "ndjson", "influxline", "prometheus", "opentelemetry
     axum::Router::new()
@@ -36,7 +36,7 @@ pub fn setup_web_routes(service_client: IngestServiceClient) -> Router {
 
 async fn handle_ndjson_ingest(
     Path(index_name): Path<String>,
-    State(state): State<IngestServiceClient>,
+    State(state): State<IndexerServiceClient>,
     req: Request,
 ) -> Result<ApiOk<ProcessingReport>, ApiError> {
     let body_stream = req

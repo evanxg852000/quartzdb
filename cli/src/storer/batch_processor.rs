@@ -1,16 +1,20 @@
 use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
-use datafusion::arrow::array::{ArrayRef, BooleanArray, Float64Array, Int64Array, LargeStringArray, LargeStringBuilder, RecordBatch, StringArray, TimestampNanosecondBuilder, UInt64Array, UInt64Builder};
+use datafusion::arrow::array::{ArrayRef, BooleanArray, Float64Array, Int64Array, LargeStringBuilder, RecordBatch, StringArray, TimestampNanosecondBuilder, UInt64Array};
 use datafusion::parquet::arrow::AsyncArrowWriter;
 use proto::quartzdb::{FieldValue, ProtoDocumentBatch};
+use tantivy::query::QueryParser;
 use tokio::sync::oneshot;
-use tantivy::doc;
+use tantivy::{Directory, doc};
 
 use crate::common::index::FieldType;
+use crate::storer::split::index_store::fast_field_collector::U64FastFieldCollector;
+use crate::storer::split::index_store::packed_directory::PackedDirectory;
+use crate::storer::split::index_store::packed_file::PackedFileWriter;
 use crate::{
-    common::{index::IndexConfig, processors::Processor, schema::{QUARTZDB_ID_FIELD_NAME, QUARTZDB_VALUE_FIELD_NAME, Schema}},
-    storage::{self, storage_impl::StorageImpl},
+    common::{index::IndexConfig, processors::Processor, schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema}},
+    storer::storage_impl::StorageImpl,
 };
 
 #[derive(Debug, Clone)]
@@ -62,6 +66,10 @@ async fn put_batch(
 ) -> Result<()> {
     //TODO: perform the parquet & tantivy magic
     println!("Storing split for {}", index_name);
+    println!("DocBatch legth: {}", batch.documents.len());
+
+    // IndexBuilder(with bloom_filter), DataBuilder, SplitBuilder
+
 
     let index_dir = storage.directory
         .join(index_name);
@@ -76,21 +84,56 @@ async fn put_batch(
     let index = index?;
     println!("index created");
     let mut index_writer = index.writer(50_000_000)?;
-    let id_field = fts_schema.get_field(QUARTZDB_ID_FIELD_NAME).unwrap();
-    let obj_field = fts_schema.get_field(QUARTZDB_VALUE_FIELD_NAME).unwrap();
-    for proto_doc in &batch.documents {
+    let row_index_field = fts_schema.get_field(QUARTZDB_ROW_INDEX_FIELD_NAME).unwrap();
+    let labels_field = fts_schema.get_field(QUARTZDB_LABELS_FIELD_NAME).unwrap();
+    for (index, proto_doc) in batch.documents.iter().enumerate() {
+        let labels_object = serde_json::from_str::<serde_json::Value>(&proto_doc.labels)?;
         index_writer.add_document(tantivy::doc!(
-            id_field => proto_doc.id,
-            obj_field => proto_doc.labels,
+            row_index_field => index as u64,
+            labels_field => labels_object,
         )).unwrap();
     }
     index_writer.commit().unwrap();
+    let segment_ids = index.searchable_segments()?
+        .iter()
+        .map(|s| s.id()).collect::<Vec<_>>();
+    index_writer.merge(&segment_ids).await?;
+    index_writer.wait_merging_threads()?;
     println!("end tantivy index");
+
+    //pack index
+    let index_dir_manager = index.directory();
+    let mut file_packer = PackedFileWriter::new(index_dir.join("data.idx")).await?;
+    for f in index_dir_manager.list_managed_files() {
+        let moved_dir = index_dir_manager.clone();
+        let moved_f = f.clone();
+        let data = tokio::task::spawn_blocking(move || {
+            let data = moved_dir.atomic_read(moved_f.as_path())?;
+            anyhow::Ok(data)
+        }).await??;
+        file_packer.add(f, data).await?;
+    }
+    file_packer.finilize().await?;
+    println!("end packing index");
+
+    println!("search inside the packed index");
+    let packed_file = index_dir.join("data.idx");
+    let packed_directory = PackedDirectory::new(packed_file.as_path()).await?;
+    let new_index = tantivy::Index::open(packed_directory)?;
+    let reader = new_index.reader()?;
+    let searcher = reader.searcher();
+
+    let query_parser = QueryParser::for_index(&index, vec![labels_field]);
+    let query = query_parser.parse_query(r#"hostname:"some.casa""#)?;
+    let collector = U64FastFieldCollector::new(QUARTZDB_ROW_INDEX_FIELD_NAME);
+    let row_indices = searcher.search(&query, &collector)?;
+    for row_indexe in row_indices {
+        println!("->: {:?}", batch.documents[row_indexe as usize]);
+    }
     
-    //parquet
+    // build data file (parquet)
     let data_schema = Schema::get_primary_schema(index_config);
     let capacity = batch.documents.len();
-    let mut ids_builder = UInt64Builder::with_capacity(capacity);
     let mut timestamps_builder = TimestampNanosecondBuilder::with_capacity(capacity).with_timezone("UTC");
     let mut sources_builder = LargeStringBuilder::with_capacity(capacity, capacity*200);
 
@@ -103,7 +146,6 @@ async fn put_batch(
 
     // build columnar values
     for proto_doc in batch.documents {
-        ids_builder.append_value(proto_doc.id);
         timestamps_builder.append_value(proto_doc.timestamp);
         sources_builder.append_value(proto_doc.source);
 
@@ -114,7 +156,6 @@ async fn put_batch(
     }
 
     let mut column_data: Vec<ArrayRef> = vec![
-            Arc::new(ids_builder.finish()),
             Arc::new(timestamps_builder.finish()),
             Arc::new(sources_builder.finish()),
     ];
@@ -128,6 +169,12 @@ async fn put_batch(
         };
         column_data.push(column_array);
     }
+
+    // let props = WriterProperties::builder()
+    //     // .set_compression(parquet::basic::Compression::SNAPPY)
+    //     .set_max_row_group_row_count(Some(1024 * 2))
+    //     .set_data_page_row_count_limit(value)
+    //     .build();
 
     let batch = RecordBatch::try_new(data_schema, column_data).unwrap();
     let file = tokio::fs::File::create(index_dir.join("data.parquet")).await?;

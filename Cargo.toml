@@ -4,17 +4,15 @@ resolver = "3"
 members = [
     "cli",
     "proto",
-    # "quartz-insert",
-    # "log-store",
-    # "quartz-common",
-    # "quartz-data-model",
-    # "quartz-index",
-    
-    # "quartz-log-store",
-    # "quartz-select",
-    # "quartz-storage",
-    # "quartz-metastore",
+    "storage",
+
+    # "metastore",
+    # "indexer",
+    # "searcher",
+    # "storer",
 ]
+
+exclude = ["df-example"]
 
 [workspace.package]
 version = "0.0.1"
@@ -69,8 +67,10 @@ tonic = "0.12"
 tonic-reflection = "0.12"
 tonic-build = "0.12"
 prost-build = "0.13"
+iceberg = "0.9.0"
 
 proto = { path = "proto" }
+storage = { path = "storage" }
 
 
 # quartz-insert = { path = "quartz-insert" }

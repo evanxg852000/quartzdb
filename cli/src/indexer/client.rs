@@ -2,20 +2,20 @@ use tokio::sync::oneshot;
 
 use crate::{
     common::document::DocumentBatch,
-    ingest::{
+    indexer::{
         commands::{IngestServiceCommand, IngestServiceMailbox},
         doc_processor::{DocProcessorPolicy, ProcessingReport},
     },
 };
 
 #[derive(Debug, Clone)]
-pub struct IngestServiceClient {
+pub struct IndexerServiceClient {
     mailbox: IngestServiceMailbox,
 }
 
-impl IngestServiceClient {
+impl IndexerServiceClient {
     pub fn new(mailbox: IngestServiceMailbox) -> Self {
-        IngestServiceClient { mailbox }
+        IndexerServiceClient { mailbox }
     }
 
     pub async fn process_batch(

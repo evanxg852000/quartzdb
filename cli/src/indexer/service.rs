@@ -5,26 +5,26 @@ use tokio::task::JoinHandle;
 
 use crate::common::index::IndexConfig;
 use crate::common::processors::ProcessorRegistry;
-use crate::ingest::client::IngestServiceClient;
-use crate::ingest::commands::{IngestServiceCommand, IngestServiceMailbox};
-use crate::ingest::doc_processor::DocProcessor;
+use crate::indexer::client::IndexerServiceClient;
+use crate::indexer::commands::{IngestServiceCommand, IngestServiceMailbox};
+use crate::indexer::doc_processor::DocProcessor;
 use crate::metastore::client::MetastoreClient;
 use crate::metastore::events::MetastoreEvent;
-use crate::storage::client::StorageServiceClient;
+use crate::storer::client::StorerServiceClient;
 
 type DocProcessorRegistry = ProcessorRegistry<DocProcessor>;
 
-pub struct IngestService {
+pub struct IndexerService {
     mailbox: Option<IngestServiceMailbox>,
     join_handle: Option<JoinHandle<Result<()>>>,
     processors: Arc<DocProcessorRegistry>,
     metastore_client: MetastoreClient,
-    storage_client: StorageServiceClient,
+    storage_client: StorerServiceClient,
 }
 
-impl IngestService {
-    pub fn new(metastore_client: MetastoreClient, storage_client: StorageServiceClient) -> Self {
-        IngestService {
+impl IndexerService {
+    pub fn new(metastore_client: MetastoreClient, storage_client: StorerServiceClient) -> Self {
+        IndexerService {
             mailbox: None,
             join_handle: None,
             processors: Arc::new(DocProcessorRegistry::new()),
@@ -72,12 +72,12 @@ impl IngestService {
         Ok(())
     }
 
-    pub fn new_client(&self) -> IngestServiceClient {
+    pub fn new_client(&self) -> IndexerServiceClient {
         let mailbox = self
             .mailbox
             .as_ref()
             .expect("start the service before creating a client");
-        IngestServiceClient::new(mailbox.clone())
+        IndexerServiceClient::new(mailbox.clone())
     }
 }
 
@@ -104,7 +104,7 @@ async fn handle_other_commands(
 
 async fn handle_event(
     processors_registry: Arc<DocProcessorRegistry>,
-    storage_client: StorageServiceClient,
+    storage_client: StorerServiceClient,
     event: MetastoreEvent,
 ) -> Result<()> {
     match event {
@@ -120,7 +120,7 @@ async fn handle_event(
     Ok(())
 }
 
-fn initialize_processor(storage_client: StorageServiceClient, index_name: String, config: IndexConfig) -> (Arc<IndexConfig>, Arc<DocProcessor>) {
+fn initialize_processor(storage_client: StorerServiceClient, index_name: String, config: IndexConfig) -> (Arc<IndexConfig>, Arc<DocProcessor>) {
     let index_config = Arc::new(config);
     let processor = Arc::new(DocProcessor::new(
         index_name,

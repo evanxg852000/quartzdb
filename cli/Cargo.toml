@@ -38,6 +38,7 @@ futures-util = { workspace = true }
 chrono = { workspace = true }
 jiff = { workspace = true }
 uuid = { workspace = true }
+iceberg = { workspace = true }
 
 proto = { workspace = true }
 

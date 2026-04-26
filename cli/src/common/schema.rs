@@ -14,8 +14,8 @@ use crate::common::{
     index::{FieldType, IndexConfig},
 };
 
-pub const QUARTZDB_ID_FIELD_NAME: &'static str = "__qtz_id";
-pub const QUARTZDB_VALUE_FIELD_NAME: &'static str = "__qtz_value";
+pub const QUARTZDB_ROW_INDEX_FIELD_NAME: &'static str = "__qtz_index";
+pub const QUARTZDB_LABELS_FIELD_NAME: &'static str = "__qtz_labels";
 pub const QUARTZDB_TIMESTAMP_FIELD_NAME: &'static str = "__qtz_timestamp";
 pub const QUARTZDB_SOURCE_FIELD_NAME: &'static str = "__qtz_source";
 
@@ -29,11 +29,6 @@ impl Schema {
     pub fn get_primary_schema(index_config: &IndexConfig) -> Arc<datafusion_schema::Schema> {
         let capacity = index_config.fields.len() + 3;
         let mut fields = Vec::with_capacity(capacity);
-        fields.push(datafusion_schema::Field::new(
-            QUARTZDB_ID_FIELD_NAME,
-            datafusion_schema::DataType::UInt64,
-            false,
-        ));
         fields.push(datafusion_schema::Field::new(
             QUARTZDB_TIMESTAMP_FIELD_NAME,
             datafusion_schema::DataType::Timestamp(
@@ -66,13 +61,13 @@ impl Schema {
         let mut schema_builder = tantivy_schema::Schema::builder();
 
         // row_id field
-        schema_builder.add_u64_field(QUARTZDB_ID_FIELD_NAME, tantivy_schema::INDEXED);
+        schema_builder.add_u64_field(QUARTZDB_ROW_INDEX_FIELD_NAME, tantivy_schema::INDEXED | tantivy_schema::FAST);
 
         // row fts object field
         let json_options = tantivy_schema::JsonObjectOptions::default()
             .set_expand_dots_enabled()
             .set_indexing_options(tantivy_schema::TEXT.get_indexing_options().unwrap().clone());
-        schema_builder.add_json_field(QUARTZDB_VALUE_FIELD_NAME, json_options);
+        schema_builder.add_json_field(QUARTZDB_LABELS_FIELD_NAME, json_options);
         schema_builder.build()
     }
 

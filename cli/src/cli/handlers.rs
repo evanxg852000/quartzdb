@@ -8,9 +8,9 @@ use crate::cli::utils;
 use crate::common::index::IndexMeta;
 use crate::common::models::{ApiError, ApiOk};
 use crate::common::{config::QuartzConfig, models::AppInfo};
-use crate::ingest::service::IngestService;
+use crate::indexer::service::IndexerService;
 use crate::metastore::service::MetastoreService;
-use crate::storage::service::StorageService;
+use crate::storer::service::StorerService;
 
 pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
     let data_dir = config.data_dir.clone();
@@ -19,13 +19,13 @@ pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
     metastore_service.start().await?;
     let metastore_client = metastore_service.new_client();
 
-    let mut storage_service = StorageService::new(data_dir, metastore_client.clone());
+    let mut storage_service = StorerService::new(data_dir, metastore_client.clone());
     storage_service
         .start()
         .await?;
     let storage_client = storage_service.new_client();
 
-    let mut ingest_service = IngestService::new(metastore_client.clone(), storage_client);
+    let mut ingest_service = IndexerService::new(metastore_client.clone(), storage_client);
     ingest_service
         .start()
         .await?;
@@ -33,7 +33,7 @@ pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
 
     let services_router = axum::Router::new()
         .merge(crate::metastore::web::setup_web_routes(metastore_client))
-        .merge(crate::ingest::web::setup_web_routes(ingest_client));
+        .merge(crate::indexer::web::setup_web_routes(ingest_client));
 
     let app = axum::Router::new()
         .route(

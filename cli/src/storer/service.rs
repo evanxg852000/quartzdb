@@ -6,9 +6,9 @@ use tokio::task::JoinHandle;
 use crate::{
     common::{index::IndexConfig, processors::ProcessorRegistry},
     metastore::{client::MetastoreClient, events::MetastoreEvent},
-    storage::{
+    storer::{
         batch_processor::BatchProcessor,
-        client::StorageServiceClient,
+        client::StorerServiceClient,
         commands::{StorageServiceCommand, StorageServiceMailbox},
         storage_impl::StorageImpl,
     },
@@ -16,7 +16,7 @@ use crate::{
 
 type BatchProcessorRegistry = ProcessorRegistry<BatchProcessor>;
 
-pub struct StorageService {
+pub struct StorerService {
     mailbox: Option<StorageServiceMailbox>,
     join_handle: Option<JoinHandle<Result<()>>>,
     processors: Arc<BatchProcessorRegistry>,
@@ -24,9 +24,9 @@ pub struct StorageService {
     metastore_client: MetastoreClient,
 }
 
-impl StorageService {
+impl StorerService {
     pub fn new(data_dir: PathBuf, metastore_client: MetastoreClient) -> Self {
-        StorageService {
+        StorerService {
             mailbox: None,
             join_handle: None,
             processors: Arc::new(ProcessorRegistry::new()),
@@ -76,12 +76,12 @@ impl StorageService {
         Ok(())
     }
 
-    pub fn new_client(&self) -> StorageServiceClient {
+    pub fn new_client(&self) -> StorerServiceClient {
         let mailbox = self
             .mailbox
             .as_ref()
             .expect("start the service before creating a client");
-        StorageServiceClient::new(mailbox.clone())
+        StorerServiceClient::new(mailbox.clone())
     }
 }
 

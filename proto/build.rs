@@ -11,8 +11,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
         .btree_map(["."])
         .type_attribute(
-            "quartzdb.PutBatchRequestFOO",
-            "#[derive(Eq, serde::Serialize, serde::Deserialize)]",
+            "quartzdb.ProtoDocument",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
+        )
+        .type_attribute(
+            "quartzdb.FieldValue",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
+        )
+        .type_attribute(
+            "quartzdb.FieldValue.kind",
+            "#[derive(serde::Serialize, serde::Deserialize)]",
         )
         .out_dir(&output_dir)
         .file_descriptor_set_path(output_dir.join("services_descriptor.bin"))

@@ -2,16 +2,16 @@ use anyhow::Result;
 use proto::quartzdb::ProtoDocumentBatch;
 use tokio::sync::oneshot;
 
-use crate::storage::commands::{StorageServiceCommand, StorageServiceMailbox};
+use crate::storer::commands::{StorageServiceCommand, StorageServiceMailbox};
 
 #[derive(Debug, Clone)]
-pub struct StorageServiceClient {
+pub struct StorerServiceClient {
     mailbox: StorageServiceMailbox,
 }
 
-impl StorageServiceClient {
+impl StorerServiceClient {
     pub fn new(mailbox: StorageServiceMailbox) -> Self {
-        StorageServiceClient { mailbox }
+        StorerServiceClient { mailbox }
     }
 
     pub async fn put_batch(&self, index_name: &str, batch: ProtoDocumentBatch) -> Result<()> {

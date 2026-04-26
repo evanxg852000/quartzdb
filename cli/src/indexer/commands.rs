@@ -2,7 +2,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     common::document::DocumentBatch,
-    ingest::doc_processor::{DocProcessorPolicy, ProcessingReport},
+    indexer::doc_processor::{DocProcessorPolicy, ProcessingReport},
 };
 
 pub type IngestServiceMailbox = mpsc::Sender<IngestServiceCommand>;

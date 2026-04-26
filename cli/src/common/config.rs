@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ingest::config::IngestConfig;
+use crate::indexer::config::IngestConfig;
 use crate::metastore::config::MetastoreConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

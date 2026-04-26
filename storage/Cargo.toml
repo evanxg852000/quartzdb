@@ -1,6 +1,6 @@
 [package]
-name = "quartz-data-model"
-description = "data model code for quartzdb"
+name = "storage"
+description = "storage layer abstraction"
 
 version.workspace = true
 edition.workspace = true
@@ -11,7 +11,4 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-arrow = "55.0"
-datafusion = "46.0"
-polars = { version = "0.46", features = ["simd", "parquet"] }
-bincode = "2.0"
+
