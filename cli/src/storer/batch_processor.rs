@@ -59,11 +59,14 @@ impl BatchProcessor {
 }
 
 async fn put_batch(
+    //TODO: (storage, index_name, index_config) should be grouped in a IndexingContext struct
     storage: Arc<StorageImpl>,
     index_name: String,
     index_config: &IndexConfig,
     batch: ProtoDocumentBatch,
 ) -> Result<()> {
+
+
     //TODO: perform the parquet & tantivy magic
     println!("Storing split for {}", index_name);
     println!("DocBatch legth: {}", batch.documents.len());

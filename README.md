@@ -23,6 +23,11 @@ cargo run -- index delete --name github_events
 
 ```
 
+TODO:
+- fix config
+- fix storage layering & index Context
+- split writter
+
 
 
 Datafusion:

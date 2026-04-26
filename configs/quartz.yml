@@ -1,5 +1,13 @@
 
-data_dir: "./qtzdb_data"
+storage:
+  directory: "./qtzdb_data"
+  uri: s3://quartzdb-bucket/
+  cache: 
+    policy: lru
+    capacity: 2GB
+# storage_dir: "./qtzdb_data"
+# storage_uri: s3://quartzdb-bucket/
+
 
 metastore:
   type: local
