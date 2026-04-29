@@ -37,7 +37,7 @@ impl FieldValue {
             kind: Some(Kind::BoolVal(v)),
         }
     }
-    
+
     pub fn as_u64(&self) -> Option<u64> {
         match self.kind {
             Some(Kind::UintVal(v)) => Some(v),
@@ -72,7 +72,6 @@ impl FieldValue {
             _ => None,
         }
     }
-
 }
 
 impl ProtoDocument {
@@ -96,14 +95,14 @@ impl ProtoDocument {
 impl ProtoDocumentBatch {
     pub fn new(batch_id: String) -> Self {
         Self {
-            id: batch_id,  
-            documents: vec![] 
+            id: batch_id,
+            documents: vec![],
         }
     }
 
     pub fn with_capacity(batch_id: String, capacity: usize) -> Self {
         Self {
-            id: batch_id,  
+            id: batch_id,
             documents: Vec::with_capacity(capacity),
         }
     }
@@ -117,6 +116,21 @@ impl ProtoDocumentBatch {
     }
 
     pub fn sort(&mut self) {
-        self.documents.sort_by_key(|doc|doc.timestamp);
+        self.documents.sort_by_key(|doc| doc.timestamp);
+    }
+
+    pub fn min_timestamp(&self) -> i64 {
+        if self.documents.is_empty() {
+            return 0;
+        }
+        self.documents[0].timestamp
+    }
+
+    pub fn max_timestamp(&self) -> i64 {
+        let length = self.documents.len();
+        if length == 0 {
+            return 0;
+        }
+        self.documents[length - 1].timestamp
     }
 }

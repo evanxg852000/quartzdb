@@ -1,5 +1,3 @@
-
-
 pub struct ColumnStoreWriter {
     // parquet
 }

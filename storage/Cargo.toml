@@ -21,6 +21,7 @@ tempfile = { workspace = true}
 bytes = { workspace = true}
 url =  { workspace = true}
 futures = { workspace = true }
+serde = { workspace = true }
 
 stream_shared = "0.8.6"
 tokio-stream = "0.1.18"

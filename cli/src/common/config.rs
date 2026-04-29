@@ -2,8 +2,9 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
+use storage::StorageConfig;
 
-use crate::indexer::config::IngestConfig;
+use crate::indexer::config::IndexerConfig;
 use crate::metastore::config::MetastoreConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,7 +13,8 @@ pub struct QuartzConfig {
     pub endpoint: String,
     pub data_dir: PathBuf,
     pub metastore: MetastoreConfig,
-    pub ingest: IngestConfig,
+    pub indexer: IndexerConfig,
+    pub storage: StorageConfig,
 }
 
 impl Default for QuartzConfig {
@@ -23,7 +25,8 @@ impl Default for QuartzConfig {
             endpoint: format!("http://{}", socket_addr),
             data_dir: PathBuf::from("./quartzdb_data"),
             metastore: MetastoreConfig::default(),
-            ingest: IngestConfig::default(),
+            indexer: IndexerConfig::default(),
+            storage: StorageConfig::default(),
         }
     }
 }

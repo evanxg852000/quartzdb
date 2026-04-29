@@ -4,12 +4,11 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
+use tantivy::Directory;
 use tantivy::directory::error::OpenReadError;
 use tantivy::directory::{FileHandle, FileSlice, OwnedBytes};
-use tantivy::Directory;
 
 use crate::storer::split::index_store::packed_file::PackedFileReader;
-
 
 #[derive(Clone)]
 pub struct PackedDirectory {
@@ -22,11 +21,10 @@ impl Debug for PackedDirectory {
     }
 }
 
-
 impl PackedDirectory {
-    pub async fn new(path: impl AsRef<Path>) -> Result<Self>  {
+    pub async fn new(path: impl AsRef<Path>) -> Result<Self> {
         let reader = Arc::new(PackedFileReader::new(path).await?);
-        Ok(Self{reader})
+        Ok(Self { reader })
     }
 }
 
@@ -40,10 +38,9 @@ impl Directory for PackedDirectory {
         let reader = self.reader.clone();
         let data = tokio::task::block_in_place(move || {
             let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                reader.get(path).await
-            })
-        }).map_err(|_| OpenReadError::FileDoesNotExist(path.to_path_buf()))?;
+            handle.block_on(async { reader.get(path).await })
+        })
+        .map_err(|_| OpenReadError::FileDoesNotExist(path.to_path_buf()))?;
         Ok(FileSlice::new(Arc::new(OwnedBytes::new(data))))
     }
 
@@ -59,10 +56,9 @@ impl Directory for PackedDirectory {
         let reader = self.reader.clone();
         let exists = tokio::task::block_in_place(move || {
             let handle = tokio::runtime::Handle::current();
-            handle.block_on(async {
-                reader.exists(path).await
-            })
-        }).map_err(|_| OpenReadError::FileDoesNotExist(path.to_path_buf()))?;
+            handle.block_on(async { reader.exists(path).await })
+        })
+        .map_err(|_| OpenReadError::FileDoesNotExist(path.to_path_buf()))?;
         Ok(exists)
     }
 

@@ -4,6 +4,7 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use tokio::sync::oneshot;
 
+use crate::common::index::IndexMeta;
 use crate::common::processors::Processor;
 use crate::common::schema::Schema;
 use crate::common::{
@@ -58,32 +59,37 @@ impl ProcessingReport {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct IndexerContext {
+    storer_client: StorerServiceClient,
+    index_meta: Arc<IndexMeta>,
+}
+
+impl IndexerContext {
+    pub fn new(storer_client: StorerServiceClient, index_meta: Arc<IndexMeta>) -> Self {
+        Self {
+            storer_client,
+            index_meta,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum DocProcessorPolicy {
     Strict,
     Lenient,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DocProcessor {
-    index_name: String,
-    index_config: Arc<IndexConfig>,
-    storage_client: StorerServiceClient,
+    context: Arc<IndexerContext>,
 }
 
 impl Processor for DocProcessor {}
 
 impl DocProcessor {
-    pub fn new(
-        index_name: String,
-        index_config: Arc<IndexConfig>,
-        storage_client: StorerServiceClient,
-    ) -> Self {
-        Self {
-            index_name,
-            index_config,
-            storage_client,
-        }
+    pub fn new(context: Arc<IndexerContext>) -> Self {
+        Self { context }
     }
 
     pub async fn process_batch(
@@ -92,7 +98,7 @@ impl DocProcessor {
         policy: DocProcessorPolicy,
         reply_sender: oneshot::Sender<ProcessingReport>,
     ) -> Result<()> {
-        let (proto_batch, report) = process_batch(&self.index_config, batch, policy)?;
+        let (proto_batch, report) = process_batch(&self.context.index_meta.config, batch, policy)?;
         if !report.accepted {
             reply_sender
                 .send(report)
@@ -100,8 +106,9 @@ impl DocProcessor {
             return Ok(());
         }
 
-        self.storage_client
-            .put_batch(&self.index_name, proto_batch)
+        self.context
+            .storer_client
+            .put_batch(&self.context.index_meta.name, proto_batch)
             .await?;
 
         reply_sender
@@ -125,7 +132,7 @@ fn process_batch(
             Err(err) => report.add_error(err),
         }
     }
-    proto_batch.sort(); // IMPORTANT
+    proto_batch.sort(); // VERY IMPORTANT
 
     if matches!(policy, DocProcessorPolicy::Strict) && report.has_error() {
         report.accepted = false
@@ -156,42 +163,3 @@ fn process_document(
         tags,
     })
 }
-
-// pub struct ProcessorRegistry {
-//     indexes: Mutex<HashMap<String, (Arc<IndexConfig>, Arc<DocProcessor>)>>,
-// }
-
-// impl ProcessorRegistry {
-//     pub fn new() -> Self {
-//         Self {
-//             indexes: Mutex::new(HashMap::new()),
-//         }
-//     }
-
-//     pub async fn put_index(&self, index_name: String, index_config: IndexConfig) {
-//         let mut indexes = self.indexes.lock().await;
-//         let index_config = Arc::new(index_config);
-//         let processor = Arc::new(DocProcessor::new(index_config.clone()));
-//         match indexes.entry(index_name) {
-//             Entry::Occupied(mut entry) => {
-//                 entry.insert((index_config, processor));
-//             }
-//             Entry::Vacant(entry) => {
-//                 entry.insert((index_config, processor));
-//             }
-//         }
-//     }
-
-//     pub async fn delete_index(&self, index_name: &str) {
-//         let mut indexes = self.indexes.lock().await;
-//         indexes.remove(index_name);
-//     }
-
-//     pub async fn get_processor(&self, index_name: &str) -> Result<Arc<DocProcessor>> {
-//         let mut indexes = self.indexes.lock().await;
-//         let (_, processor) = indexes.get_mut(index_name).ok_or_else(|| {
-//             anyhow::anyhow!("Index `{}` not found in the processor registry", index_name)
-//         })?;
-//         Ok(processor.clone())
-//     }
-// }

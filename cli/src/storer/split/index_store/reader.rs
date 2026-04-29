@@ -1,5 +1,1 @@
-
-
-pub struct IndexReader{
-    
-}
+pub struct IndexReader {}

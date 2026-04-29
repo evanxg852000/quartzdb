@@ -3,18 +3,18 @@ use tokio::sync::oneshot;
 use crate::{
     common::document::DocumentBatch,
     indexer::{
-        commands::{IngestServiceCommand, IngestServiceMailbox},
+        commands::{IndexerServiceCommand, IndexerServiceMailbox},
         doc_processor::{DocProcessorPolicy, ProcessingReport},
     },
 };
 
 #[derive(Debug, Clone)]
 pub struct IndexerServiceClient {
-    mailbox: IngestServiceMailbox,
+    mailbox: IndexerServiceMailbox,
 }
 
 impl IndexerServiceClient {
-    pub fn new(mailbox: IngestServiceMailbox) -> Self {
+    pub fn new(mailbox: IndexerServiceMailbox) -> Self {
         IndexerServiceClient { mailbox }
     }
 
@@ -25,7 +25,7 @@ impl IndexerServiceClient {
         policy: DocProcessorPolicy,
     ) -> anyhow::Result<ProcessingReport> {
         let (tx, rx) = oneshot::channel();
-        let request = IngestServiceCommand::IngestBatch {
+        let request = IndexerServiceCommand::IngestBatch {
             index_name,
             batch,
             policy,

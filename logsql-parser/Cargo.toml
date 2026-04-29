@@ -1,6 +1,6 @@
 [package]
-name = "quartz-insert"
-description = "ingestion node"
+name = "logsql-parser"
+description = "A parser for the VictoriLogs LogsQL language in rust"
 
 version.workspace = true
 edition.workspace = true
@@ -11,5 +11,4 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-axum = {workspace = true}
 anyhow = {workspace = true}

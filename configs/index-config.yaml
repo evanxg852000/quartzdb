@@ -1,8 +1,5 @@
 name: github_events
 
-storage: 
-  uri: s3://my-special-bucket/logs/ # override the global storage.uri
-
 config:
   timestamp: created_at # always nanosecond precision
 
@@ -34,8 +31,8 @@ config:
       type: bool
 
 settings:
-  # storage:
-  #   uri: s3://mi.io/my-bucket
+  storage:
+    uri: s3://mi.io/my-bucket # override the global storage.uri
   searcher:
     todo: TODO
   indexer:

@@ -39,6 +39,10 @@ chrono = { workspace = true }
 jiff = { workspace = true }
 uuid = { workspace = true }
 iceberg = { workspace = true }
+tempfile = { workspace = true }
+fastbloom = { workspace = true }
+bincode = { workspace = true }
+futures = { workspace = true }
 
 proto = { workspace = true }
 storage = { workspace = true }

@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct IngestConfig {
+pub struct IndexerConfig {
     pub address: String,
 }
 
-impl Default for IngestConfig {
+impl Default for IndexerConfig {
     fn default() -> Self {
-        IngestConfig {
+        IndexerConfig {
             address: "localhost:8081".to_string(),
         }
     }

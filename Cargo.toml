@@ -6,7 +6,7 @@ members = [
     "proto",
     "storage",
 
-    # "metastore",
+    "logsql-parser",
     # "indexer",
     # "searcher",
     # "storer",
@@ -71,7 +71,9 @@ tonic-build = "0.12"
 prost-build = "0.13"
 iceberg = "0.9.0"
 tempfile = "3.10"
-bytes = "1.11.1"
+bytes = "1.11"
+fastbloom = { version = "0.17", features = ["serde"] }
+bincode = "1.3"
 
 proto = { path = "proto" }
 storage = { path = "storage" }

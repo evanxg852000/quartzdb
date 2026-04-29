@@ -76,36 +76,18 @@ pub struct IndexConfig {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub struct LocalCacheSettings {
-    pub max_size_bytes: u64,
+pub struct StorageSettings {
+    pub uri: Url,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
-pub enum StorageSettings {
-    // local file system
-    Local,
-    // S3 (aws, gcp, minio)
-    Remote {
-        bucket: Url,
-        local_cache: Option<LocalCacheSettings>,
-    },
-}
-
-// #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-// pub struct  {
-//     #[serde(rename = "type")]
-//     pub storage_type: StorageType,
-// }
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub struct IngestSettings {
+pub struct IndexerSettings {
     pub batch_size: u64,
     pub commit_timeout_secs: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub struct SearchSettings {
+pub struct SearcherSettings {
     pub todo: String,
 }
 
@@ -117,16 +99,16 @@ pub struct RetentionSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct IndexSettings {
-    pub storage: StorageSettings,
-    pub ingest: IngestSettings,
-    pub search: SearchSettings,
+    pub storage: Option<StorageSettings>,
+    pub indexer: IndexerSettings,
+    pub searcher: SearcherSettings,
     pub retention: Option<RetentionSettings>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SplitMeta {
     pub split_id: String,
-    pub index_id: String,
+    pub index_name: String,
     pub min_timestamp: i64,
     pub max_timestamp: i64,
 }

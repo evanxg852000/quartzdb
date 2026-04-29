@@ -22,10 +22,9 @@ impl MetastoreClient {
 
     pub async fn put_index(&self, index_meta: IndexMeta) -> anyhow::Result<()> {
         let name = index_meta.name.clone();
-        let config = index_meta.config.clone();
-        self.inner_impl.put_index(index_meta).await?;
+        self.inner_impl.put_index(index_meta.clone()).await?;
         self.mailbox
-            .send(MetastoreEvent::IndexPut { name, config })?;
+            .send(MetastoreEvent::IndexPut { name, index_meta })?;
         Ok(())
     }
 

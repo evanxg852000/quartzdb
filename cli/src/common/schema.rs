@@ -61,7 +61,10 @@ impl Schema {
         let mut schema_builder = tantivy_schema::Schema::builder();
 
         // row_id field
-        schema_builder.add_u64_field(QUARTZDB_ROW_INDEX_FIELD_NAME, tantivy_schema::INDEXED | tantivy_schema::FAST);
+        schema_builder.add_u64_field(
+            QUARTZDB_ROW_INDEX_FIELD_NAME,
+            tantivy_schema::INDEXED | tantivy_schema::FAST,
+        );
 
         // row fts object field
         let json_options = tantivy_schema::JsonObjectOptions::default()

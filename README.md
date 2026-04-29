@@ -24,9 +24,14 @@ cargo run -- index delete --name github_events
 ```
 
 TODO:
-- fix config
-- fix storage layering & index Context
-- split writter
+- [x] fix config
+- [ ] fix storage layering & index Context
+- [ ] split writter
+- [ ] basic query
+- [ ] logsql-parser
+- [ ] good caching mechanism
+
+https://www.bitsxpages.com/p/how-metrics-are-stored-and-queried
 
 
 

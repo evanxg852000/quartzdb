@@ -1,11 +1,12 @@
 use async_trait::async_trait;
 use bytes::Bytes;
+use url::Url;
 use std::{io, path::Path, sync::Arc};
 
+use crate::{BoxedBytesStream, Storage, object_storage::ObjectStorageWrapper};
 use anyhow::Result;
 use object_store::{ObjectStore, aws::AmazonS3Builder};
-use crate::{BoxedBytesStream, Storage, object_storage::ObjectStorageWrapper};
-    
+
 #[derive(Debug)]
 pub struct RemoteStorage {
     local: Arc<dyn Storage>,
@@ -13,13 +14,15 @@ pub struct RemoteStorage {
 }
 
 impl RemoteStorage {
-    pub async fn new(storage: Arc<dyn Storage>, url: &str) -> Result<Self> {
+    pub async fn new(storage: Arc<dyn Storage>, url: &Url) -> Result<Self> {
         let remote = ObjectStorageWrapper::new(url).await?;
         Ok(Self {
             local: storage,
             remote: Arc::new(remote),
         })
     }
+
+
 
     pub(crate) fn create_remote_store(uri: impl Into<String>) -> Result<Arc<dyn ObjectStore>> {
         // use object_store::parse_url_opts;
@@ -33,7 +36,7 @@ impl RemoteStorage {
         // ];
 
         // let (store, path) = parse_url_opts(&url, options)?;
-                
+
         let aws_store = AmazonS3Builder::new()
             .with_endpoint(uri)
             .with_bucket_name("my-bucket")
@@ -45,12 +48,10 @@ impl RemoteStorage {
             .build()?;
         Ok(Arc::new(aws_store))
     }
-
 }
 
 #[async_trait]
 impl Storage for RemoteStorage {
-
     fn root(&self) -> &Path {
         self.local.root()
     }
@@ -61,6 +62,13 @@ impl Storage for RemoteStorage {
         Ok(local_exists && remote_exists)
     }
 
+    async fn swap_remote(&self, url: &Url) -> io::Result<Arc<dyn Storage>> {
+        let remote = ObjectStorageWrapper::new(url).await?;
+        Ok(Arc::new(Self {
+            local: self.local.clone(),
+            remote: Arc::new(remote),
+        }))
+    }
     // async fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     //     self.storage.create_dir_all(path).await
     // }
@@ -70,10 +78,7 @@ impl Storage for RemoteStorage {
     // }
 
     async fn put(&self, to: &str, data: Bytes) -> io::Result<()> {
-        tokio::try_join!(
-            self.local.put(to, data.clone()),
-            self.remote.put(to, data),
-        )?;
+        tokio::try_join!(self.local.put(to, data.clone()), self.remote.put(to, data),)?;
         Ok(())
     }
 
@@ -94,7 +99,8 @@ impl Storage for RemoteStorage {
 
     async fn get(&self, location: &str) -> io::Result<Bytes> {
         let local_exists = self.local.exists(location).await?;
-        if !local_exists { // download to local
+        if !local_exists {
+            // download to local
             let remote_data = self.remote.get(location).await?;
             self.local.put(location, remote_data.clone()).await?;
             return Ok(remote_data);
@@ -104,7 +110,8 @@ impl Storage for RemoteStorage {
 
     async fn get_as_stream(&self, location: &str) -> io::Result<BoxedBytesStream> {
         let local_exists = self.local.exists(location).await?;
-        if !local_exists { //download
+        if !local_exists {
+            //download
             let remote_stream = self.remote.get_as_stream(location).await?;
             self.local.put_stream(remote_stream, location).await?;
         }
@@ -122,6 +129,4 @@ impl Storage for RemoteStorage {
         }
         Ok(())
     }
-
-
 }

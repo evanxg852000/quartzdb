@@ -1,20 +1,25 @@
 use async_trait::async_trait;
 use bytes::Bytes;
-use std::{io, path::{PathBuf, Path}, sync::Arc, time::Duration};
+use serde::{Deserialize, Serialize};
+use std::{
+    io,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
+use url::Url;
 
 use hashbrown::HashMap;
 
 use crate::{BoxedBytesStream, Storage};
 use anyhow::Result;
 
-
-
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub enum CachePolicy {
     // Specify a period after which an entry can be considered for eviction
     Maturation(Duration),
     #[default]
-    Lru, 
+    Lru,
 }
 
 #[derive(Debug, Default)]
@@ -23,7 +28,7 @@ pub struct CachItemMeta {
     accessed_at: i64,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub struct CacheConfig {
     pub managed_prefixes: Vec<String>, // any item with this prefix will be considered in this cache
     pub available_disk_capacity: usize, // cache size in bytes
@@ -40,7 +45,7 @@ pub struct CachableStorage {
 
 impl CachableStorage {
     pub fn new(storage: Arc<dyn Storage>, config: CacheConfig) -> Result<Self> {
-        Ok(Self{
+        Ok(Self {
             inner: storage,
             items: HashMap::new(),
             config,
@@ -48,11 +53,9 @@ impl CachableStorage {
     }
 }
 
-
 #[async_trait]
 impl Storage for CachableStorage {
-
-    fn root(&self) ->&Path {
+    fn root(&self) -> &Path {
         self.inner.root()
     }
 
@@ -60,15 +63,15 @@ impl Storage for CachableStorage {
         self.inner.exists(location).await
     }
 
-    // async fn create_dir_all(&self, path: &Path) -> io::Result<()> {
-    //     self.storage.create_dir_all(path).await
-    // }
+    async fn swap_remote(&self, _url: &Url) -> io::Result<Arc<dyn Storage>> {
+        Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported operation"))
+    }
 
     // async fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
     //     self.storage.remove_dir_all(path).await
     // }
 
-     async fn put(&self, to: &str, data: Bytes) -> io::Result<()> {
+    async fn put(&self, to: &str, data: Bytes) -> io::Result<()> {
         self.inner.put(to, data).await
     }
 
@@ -92,4 +95,3 @@ impl Storage for CachableStorage {
         self.inner.delete(location).await
     }
 }
-

@@ -15,20 +15,20 @@ use crate::storer::service::StorerService;
 pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
     let data_dir = config.data_dir.clone();
 
+    // initilize base storage
+    tokio::fs::create_dir_all(data_dir.clone()).await?;
+    let storage = config.storage.build().await?;
+
     let mut metastore_service = MetastoreService::new(data_dir.clone());
     metastore_service.start().await?;
     let metastore_client = metastore_service.new_client();
 
-    let mut storage_service = StorerService::new(data_dir, metastore_client.clone());
-    storage_service
-        .start()
-        .await?;
-    let storage_client = storage_service.new_client();
+    let mut storer_service = StorerService::new(storage, metastore_client.clone());
+    storer_service.start().await?;
+    let storer_client = storer_service.new_client();
 
-    let mut ingest_service = IndexerService::new(metastore_client.clone(), storage_client);
-    ingest_service
-        .start()
-        .await?;
+    let mut ingest_service = IndexerService::new(metastore_client.clone(), storer_client);
+    ingest_service.start().await?;
     let ingest_client = ingest_service.new_client();
 
     let services_router = axum::Router::new()

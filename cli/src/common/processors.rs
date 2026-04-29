@@ -4,12 +4,12 @@ use anyhow::Result;
 use hashbrown::{HashMap, hash_map::Entry};
 use tokio::sync::Mutex;
 
-use crate::common::index::IndexConfig;
+use crate::common::index::IndexMeta;
 
 pub trait Processor {}
 
 pub struct ProcessorRegistry<T> {
-    indexes: Mutex<HashMap<String, (Arc<IndexConfig>, Arc<T>)>>,
+    indexes: Mutex<HashMap<String, (Arc<IndexMeta>, Arc<T>)>>,
 }
 
 impl<T: Processor> ProcessorRegistry<T> {
@@ -19,19 +19,23 @@ impl<T: Processor> ProcessorRegistry<T> {
         }
     }
 
-    pub async fn add_initial_processors(&self, processors: Vec<(String, (Arc<IndexConfig>, Arc<T>))>) {
+    pub async fn add_initial_processors(
+        &self,
+        processors: Vec<(String, (Arc<IndexMeta>, Arc<T>))>,
+    ) {
         let mut indexes = self.indexes.lock().await;
         for (key, processor) in processors {
             indexes.insert(key, processor);
         }
     }
 
-    pub async fn put_index<F>(&self, index_name: String, initialize: F)
+    pub async fn put_index<F, Fut>(&self, index_name: String, initialize: F) -> Result<()>
     where
-        F: FnOnce() -> (Arc<IndexConfig>, Arc<T>),
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<(Arc<IndexMeta>, Arc<T>)>>
     {
         let mut indexes = self.indexes.lock().await;
-        let (index_config, processor) = initialize();
+        let (index_config, processor) = initialize().await?;
         match indexes.entry(index_name) {
             Entry::Occupied(mut entry) => {
                 entry.insert((index_config, processor));
@@ -40,6 +44,7 @@ impl<T: Processor> ProcessorRegistry<T> {
                 entry.insert((index_config, processor));
             }
         }
+        Ok(())
     }
 
     pub async fn delete_index(&self, index_name: &str) {

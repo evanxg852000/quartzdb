@@ -1,6 +1,11 @@
 use async_trait::async_trait;
 use bytes::Bytes;
-use std::{io, path::{Path, PathBuf}, sync::Arc};
+use std::{
+    io,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+use url::Url;
 
 use anyhow::Result;
 
@@ -18,12 +23,10 @@ impl LocalStorage {
             inner: Arc::new(local_fs_storage),
         })
     }
-
 }
 
 #[async_trait]
 impl Storage for LocalStorage {
-
     fn root(&self) -> &Path {
         self.inner.root()
     }
@@ -32,6 +35,9 @@ impl Storage for LocalStorage {
         self.inner.exists(location).await
     }
 
+    async fn swap_remote(&self, _url: &Url) -> io::Result<Arc<dyn Storage>> {
+        Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported operation"))
+    }
     // async fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     //     fs::create_dir_all(self.directory.join(path)).await
     // }

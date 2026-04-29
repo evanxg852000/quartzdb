@@ -5,10 +5,10 @@ use crate::{
     indexer::doc_processor::{DocProcessorPolicy, ProcessingReport},
 };
 
-pub type IngestServiceMailbox = mpsc::Sender<IngestServiceCommand>;
+pub type IndexerServiceMailbox = mpsc::Sender<IndexerServiceCommand>;
 
 #[derive(Debug)]
-pub enum IngestServiceCommand {
+pub enum IndexerServiceCommand {
     Stop,
     IngestBatch {
         index_name: String,

@@ -1,27 +1,34 @@
 use std::{collections::HashMap, path::Path, sync::Arc};
 
 use anyhow::{Ok, Result, anyhow};
-use iceberg::{io::{InputFile, LocalFsStorage, OutputFile}, puffin::{Blob, CompressionCodec, PuffinReader, PuffinWriter}};
+use iceberg::{
+    io::{InputFile, LocalFsStorage, OutputFile},
+    puffin::{Blob, CompressionCodec, PuffinReader, PuffinWriter},
+};
 
 pub struct PackedFileWriter {
-    writer: PuffinWriter,    
+    writer: PuffinWriter,
 }
 
 impl PackedFileWriter {
     pub async fn new(path: impl AsRef<Path>) -> Result<Self> {
-        let file_path = path.as_ref().to_str()
+        let file_path = path
+            .as_ref()
+            .to_str()
             .ok_or_else(|| anyhow!("Could not convert path to string"))?
             .to_string();
         let file = OutputFile::new(Arc::new(LocalFsStorage::new()), file_path);
         let writer = PuffinWriter::new(&file, HashMap::default(), false).await?;
-        Ok(Self{writer})
+        Ok(Self { writer })
     }
 
-    pub async fn add(&mut self, path: impl AsRef<Path>, data:  Vec<u8>) -> Result<()> {
-        let entry_path = path.as_ref().to_str()
+    pub async fn add(&mut self, path: impl AsRef<Path>, data: Vec<u8>) -> Result<()> {
+        let entry_path = path
+            .as_ref()
+            .to_str()
             .ok_or_else(|| anyhow!("Could not convert path to string"))?
             .to_string();
-        let blob =Blob::builder()
+        let blob = Blob::builder()
             .r#type(entry_path)
             .data(data)
             .fields(vec![])
@@ -45,19 +52,25 @@ pub struct PackedFileReader {
 
 impl PackedFileReader {
     pub async fn new(path: impl AsRef<Path>) -> Result<Self> {
-        let file_path = path.as_ref().to_str()
+        let file_path = path
+            .as_ref()
+            .to_str()
             .ok_or_else(|| anyhow!("Could not convert path to string"))?
             .to_string();
         let file = InputFile::new(Arc::new(LocalFsStorage::new()), file_path);
         let reader = PuffinReader::new(file);
-        Ok(Self{reader})
+        Ok(Self { reader })
     }
 
     pub async fn get(&self, path: impl AsRef<Path>) -> Result<Vec<u8>> {
-        let entry_path = path.as_ref().to_str()
+        let entry_path = path
+            .as_ref()
+            .to_str()
             .ok_or_else(|| anyhow!("Could not convert path to string"))?
             .to_string();
-        let blob_metadata = self.reader.file_metadata()
+        let blob_metadata = self
+            .reader
+            .file_metadata()
             .await?
             .blobs()
             .iter()
@@ -65,18 +78,22 @@ impl PackedFileReader {
             .ok_or_else(|| anyhow!("Could not find entry: `{}`", entry_path))?;
         let data = self.reader.blob(blob_metadata).await?.data().to_vec();
         Ok(data)
-    } 
+    }
 
-     pub async fn exists(&self, path: impl AsRef<Path>) -> Result<bool> {
-        let entry_path = path.as_ref().to_str()
+    pub async fn exists(&self, path: impl AsRef<Path>) -> Result<bool> {
+        let entry_path = path
+            .as_ref()
+            .to_str()
             .ok_or_else(|| anyhow!("Could not convert path to string"))?
             .to_string();
-        let exist = self.reader.file_metadata()
+        let exist = self
+            .reader
+            .file_metadata()
             .await?
             .blobs()
             .iter()
             .find(|m| m.blob_type() == entry_path)
             .is_some();
-            Ok(exist)
-    } 
+        Ok(exist)
+    }
 }
