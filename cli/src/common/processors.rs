@@ -32,7 +32,7 @@ impl<T: Processor> ProcessorRegistry<T> {
     pub async fn put_index<F, Fut>(&self, index_name: String, initialize: F) -> Result<()>
     where
         F: FnOnce() -> Fut,
-        Fut: Future<Output = Result<(Arc<IndexMeta>, Arc<T>)>>
+        Fut: Future<Output = Result<(Arc<IndexMeta>, Arc<T>)>>,
     {
         let mut indexes = self.indexes.lock().await;
         let (index_config, processor) = initialize().await?;

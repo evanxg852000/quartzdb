@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bytes::Bytes;
+use std::{io, path::{Path, PathBuf}, sync::Arc};
 use url::Url;
-use std::{io, path::Path, sync::Arc};
 
 use crate::{BoxedBytesStream, Storage, object_storage::ObjectStorageWrapper};
 use anyhow::Result;
@@ -14,15 +14,13 @@ pub struct RemoteStorage {
 }
 
 impl RemoteStorage {
-    pub async fn new(storage: Arc<dyn Storage>, url: &Url) -> Result<Self> {
+    pub async fn new(storage: Arc<dyn Storage>, url: &Url) -> io::Result<Self> {
         let remote = ObjectStorageWrapper::new(url).await?;
         Ok(Self {
             local: storage,
             remote: Arc::new(remote),
         })
     }
-
-
 
     pub(crate) fn create_remote_store(uri: impl Into<String>) -> Result<Arc<dyn ObjectStore>> {
         // use object_store::parse_url_opts;
@@ -62,13 +60,11 @@ impl Storage for RemoteStorage {
         Ok(local_exists && remote_exists)
     }
 
-    async fn swap_remote(&self, url: &Url) -> io::Result<Arc<dyn Storage>> {
-        let remote = ObjectStorageWrapper::new(url).await?;
-        Ok(Arc::new(Self {
-            local: self.local.clone(),
-            remote: Arc::new(remote),
-        }))
+    async fn derive_remote(self: Arc<Self>, url: &Url) -> io::Result<Arc<dyn Storage>> {
+        let derived_storage = RemoteStorage::new(self.local.clone(), url).await?;
+        Ok(Arc::new(derived_storage))
     }
+
     // async fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     //     self.storage.create_dir_all(path).await
     // }
@@ -82,7 +78,7 @@ impl Storage for RemoteStorage {
         Ok(())
     }
 
-    async fn put_large(&self, from: &str, to: &str) -> io::Result<()> {
+    async fn put_large(&self, from: &PathBuf, to: &PathBuf) -> io::Result<()> {
         tokio::try_join!(
             self.local.put_large(from, to),
             self.remote.put_large(to, to),

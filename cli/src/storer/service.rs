@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use futures::stream::{StreamExt, TryStreamExt};
 use futures_util::stream;
 use storage::Storage;
 use tokio::task::JoinHandle;
-use futures::stream::{StreamExt, TryStreamExt};
 
 use crate::{
-    common::{index::IndexMeta, processors::ProcessorRegistry},
+    common::{config::QuartzConfig, index::IndexMeta, processors::ProcessorRegistry},
     metastore::{client::MetastoreClient, events::MetastoreEvent},
     storer::{
         batch_processor::{BatchProcessor, StorerContext},
@@ -27,14 +27,17 @@ pub struct StorerService {
 }
 
 impl StorerService {
-    pub fn new(storage: Arc<dyn Storage>, metastore_client: MetastoreClient) -> Self {
-        StorerService {
+    pub async fn new(config: &QuartzConfig, metastore_client: MetastoreClient) -> Result<Self> {
+        // conbine storage, cache  & built storage
+        let storer_storage_config = config.storage.derive("storer", config.storer.cache.clone());
+        let storage = storer_storage_config.build().await?;
+        Ok(StorerService {
             mailbox: None,
             join_handle: None,
             processors: Arc::new(ProcessorRegistry::new()),
             storage,
             metastore_client,
-        }
+        })
     }
 
     pub async fn start(&mut self) -> Result<()> {
@@ -47,7 +50,9 @@ impl StorerService {
         let index_processors = stream::iter(indexes)
             .map(|index_meta| async {
                 let index_name = index_meta.name.clone();
-                let processor = initialize_processor(self.storage.clone().clone(), Arc::new(index_meta)).await?;
+                let processor =
+                    initialize_processor(Arc::new(index_meta), self.storage.clone(), self.metastore_client.clone())
+                        .await?;
                 anyhow::Result::<_>::Ok((index_name, processor))
             })
             .buffer_unordered(20)
@@ -59,6 +64,7 @@ impl StorerService {
 
         let processors_registry = self.processors.clone();
         let moved_storage = self.storage.clone();
+        let moved_metastore_client = self.metastore_client.clone(); 
         let handle = tokio::spawn(async move {
             loop {
                 tokio::select! {
@@ -69,7 +75,7 @@ impl StorerService {
                         }
                     }
                     Ok(event) = metastore_events_stream.recv() => {
-                        handle_event(processors_registry.clone(), moved_storage.clone(), event).await?;
+                        handle_event(processors_registry.clone(), moved_storage.clone(), moved_metastore_client.clone(), event).await?;
                     }
                     else => { // The else block or matching None handles channel closure
                         break;
@@ -114,15 +120,16 @@ async fn handle_other_commands(
 async fn handle_event(
     processors_registry: Arc<BatchProcessorRegistry>,
     storage: Arc<dyn Storage>,
+    metastore_client: MetastoreClient,
     event: MetastoreEvent,
 ) -> Result<()> {
     match event {
         MetastoreEvent::IndexPut { name, index_meta } => {
             processors_registry
                 .put_index(name.clone(), || async {
-                    initialize_processor(storage, Arc::new(index_meta)).await
+                    initialize_processor(Arc::new(index_meta), storage, metastore_client).await
                 })
-                .await;
+                .await?;
         }
         MetastoreEvent::IndexDeleted { name } => {
             processors_registry.delete_index(&name).await;
@@ -132,10 +139,11 @@ async fn handle_event(
 }
 
 async fn initialize_processor(
-    storage: Arc<dyn Storage>,
     index_meta: Arc<IndexMeta>,
+    storage: Arc<dyn Storage>,
+    metastore_client: MetastoreClient,
 ) -> Result<(Arc<IndexMeta>, Arc<BatchProcessor>)> {
-    let context = Arc::new(StorerContext::new(storage, index_meta.clone()).await?);
+    let context = Arc::new(StorerContext::new(index_meta.clone(), storage, metastore_client).await?);
     let processor = Arc::new(BatchProcessor::new(context));
     Ok((index_meta, processor))
 }

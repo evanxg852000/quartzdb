@@ -1,6 +1,7 @@
 pub mod batch_processor;
 pub mod client;
 pub mod commands;
+pub mod config;
 pub mod service;
 pub mod split;
 pub mod storage_impl;

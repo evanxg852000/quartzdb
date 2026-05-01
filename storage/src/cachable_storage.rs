@@ -11,15 +11,23 @@ use url::Url;
 
 use hashbrown::HashMap;
 
-use crate::{BoxedBytesStream, Storage};
+use crate::{BoxedBytesStream, Storage, remote_storage::RemoteStorage};
 use anyhow::Result;
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum CachePolicy {
     // Specify a period after which an entry can be considered for eviction
     Maturation(Duration),
     #[default]
     Lru,
+}
+
+#[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
+pub struct CacheConfig {
+    /// Available disk space in bytes
+    pub capacity: usize,
+    pub policy: CachePolicy,
 }
 
 #[derive(Debug, Default)]
@@ -28,19 +36,13 @@ pub struct CachItemMeta {
     accessed_at: i64,
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Clone, Deserialize, Serialize)]
-pub struct CacheConfig {
-    pub managed_prefixes: Vec<String>, // any item with this prefix will be considered in this cache
-    pub available_disk_capacity: usize, // cache size in bytes
-    pub used_disk_capacity: usize,
-    pub policy: CachePolicy,
-}
-
 #[derive(Debug)]
 pub struct CachableStorage {
     inner: Arc<dyn Storage>,
     items: HashMap<PathBuf, CachItemMeta>,
     config: CacheConfig,
+    managed_prefixes: Vec<String>, // any item with this prefix will be considered in this cache
+    used_disk_capacity: usize,     // consumed disk size in bytes
 }
 
 impl CachableStorage {
@@ -49,6 +51,8 @@ impl CachableStorage {
             inner: storage,
             items: HashMap::new(),
             config,
+            managed_prefixes: vec![],
+            used_disk_capacity: 0,
         })
     }
 }
@@ -63,8 +67,9 @@ impl Storage for CachableStorage {
         self.inner.exists(location).await
     }
 
-    async fn swap_remote(&self, _url: &Url) -> io::Result<Arc<dyn Storage>> {
-        Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported operation"))
+    async fn derive_remote(self: Arc<Self>, url: &Url) -> io::Result<Arc<dyn Storage>> {
+        let storage = RemoteStorage::new(self.clone(), url).await?;
+        Ok(Arc::new(storage))
     }
 
     // async fn remove_dir_all(&self, path: &Path) -> io::Result<()> {
@@ -75,7 +80,7 @@ impl Storage for CachableStorage {
         self.inner.put(to, data).await
     }
 
-    async fn put_large(&self, from: &str, to: &str) -> io::Result<()> {
+    async fn put_large(&self, from: &PathBuf, to: &PathBuf) -> io::Result<()> {
         self.inner.put_large(from, to).await
     }
 

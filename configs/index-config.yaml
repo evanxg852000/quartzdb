@@ -31,8 +31,8 @@ config:
       type: bool
 
 settings:
-  storage:
-    uri: s3://mi.io/my-bucket # override the global storage.uri
+  # storage:
+    # uri: s3://mi.io/my-bucket # override the global storage.uri
   searcher:
     todo: TODO
   indexer:

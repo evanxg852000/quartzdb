@@ -9,7 +9,9 @@ use url::Url;
 
 use anyhow::Result;
 
-use crate::{BoxedBytesStream, Storage, object_storage::ObjectStorageWrapper};
+use crate::{
+    BoxedBytesStream, Storage, object_storage::ObjectStorageWrapper, remote_storage::RemoteStorage,
+};
 
 #[derive(Debug)]
 pub struct LocalStorage {
@@ -35,8 +37,14 @@ impl Storage for LocalStorage {
         self.inner.exists(location).await
     }
 
-    async fn swap_remote(&self, _url: &Url) -> io::Result<Arc<dyn Storage>> {
-        Err(io::Error::new(io::ErrorKind::InvalidInput, "Unsupported operation"))
+    // async fn swap_remote(&self, _url: &Url) -> io::Result<Arc<dyn Storage>> {
+    //     println!("local");
+    //     Err(io::Error::new(io::ErrorKind::InvalidInput, "LocalStorage: unsupported operation"))
+    // }
+
+    async fn derive_remote(self: Arc<Self>, url: &Url) -> io::Result<Arc<dyn Storage>> {
+        let storage = RemoteStorage::new(self.clone(), url).await?;
+        Ok(Arc::new(storage))
     }
     // async fn create_dir_all(&self, path: &Path) -> io::Result<()> {
     //     fs::create_dir_all(self.directory.join(path)).await
@@ -51,7 +59,7 @@ impl Storage for LocalStorage {
         self.inner.put(to, data).await
     }
 
-    async fn put_large(&self, from: &str, to: &str) -> io::Result<()> {
+    async fn put_large(&self, from: &PathBuf, to: &PathBuf) -> io::Result<()> {
         self.inner.put_large(from, to).await
     }
 

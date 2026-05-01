@@ -19,7 +19,6 @@ use url::Url;
 
 use crate::cachable_storage::{CachableStorage, CacheConfig};
 use crate::local_storage::LocalStorage;
-use crate::remote_storage::RemoteStorage;
 
 pub struct StorgeConfig {}
 
@@ -43,11 +42,11 @@ pub trait Storage: Send + Sync + Debug {
 
     async fn exists(&self, location: &str) -> io::Result<bool>;
 
-    async fn swap_remote(&self, url: &Url) -> io::Result<Arc<dyn Storage>>;
+    async fn derive_remote(self: Arc<Self>, url: &Url) -> io::Result<Arc<dyn Storage>>;
 
     async fn put(&self, to: &str, data: Bytes) -> io::Result<()>;
 
-    async fn put_large(&self, from: &str, to: &str) -> io::Result<()>;
+    async fn put_large(&self, from: &PathBuf, to: &PathBuf) -> io::Result<()>;
 
     async fn put_stream(&self, mut stream: BoxedBytesStream, to: &str) -> io::Result<()>;
 
@@ -65,10 +64,20 @@ pub struct StorageConfig {
     pub uri: Option<Url>, // s3 url
 }
 
+impl StorageConfig {
+    pub fn new(directory: &str) -> Self {
+        Self {
+            directory: PathBuf::from(directory),
+            cache: None,
+            uri: None,
+        }
+    }
+}
+
 impl Default for StorageConfig {
     fn default() -> Self {
         Self {
-            directory: PathBuf::from("."),
+            directory: PathBuf::from("./quartzdb_data"),
             cache: None,
             uri: None,
         }
@@ -76,20 +85,26 @@ impl Default for StorageConfig {
 }
 
 impl StorageConfig {
+    pub fn derive(&self, directory: impl AsRef<Path>, cache: Option<CacheConfig>) -> Self {
+        Self {
+            directory: self.directory.clone().join(directory),
+            cache,
+            uri: self.uri.clone(),
+        }
+    }
 
     pub async fn build(&self) -> Result<Arc<dyn Storage>> {
+        tokio::fs::create_dir_all(&self.directory).await?;
         let mut storage: Arc<dyn Storage> = Arc::new(LocalStorage::new(&self.directory).await?);
         if let Some(cache_config) = &self.cache {
             storage = Arc::new(CachableStorage::new(storage, cache_config.clone())?);
         }
         if let Some(remote_uri) = &self.uri {
-            storage = Arc::new(RemoteStorage::new(storage, remote_uri).await?);
+            storage = storage.derive_remote(remote_uri).await?;
         }
         Ok(storage)
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -98,7 +113,6 @@ mod tests {
     use crate::{
         cachable_storage::{CachableStorage, CacheConfig},
         local_storage::LocalStorage,
-        remote_storage::RemoteStorage,
     };
 
     use super::*;
@@ -111,11 +125,15 @@ mod tests {
 
         let local = Arc::new(LocalStorage::new(dir).await?);
         let cached = Arc::new(CachableStorage::new(local, CacheConfig::default())?);
-        let golbal_storage = RemoteStorage::new(cached.clone(), &Url::parse("s3://foo/bar").unwrap()).await?;
-        let my_index_storage = RemoteStorage::new(cached.clone(), &Url::parse("s3://my/index/bucket").unwrap()).await?;
+        let _golbal_storage = cached
+            .clone()
+            .derive_remote(&Url::parse("s3://foo/bar").unwrap())
+            .await?;
+        let _my_index_storage = cached
+            .derive_remote(&Url::parse("s3://my/index/bucket").unwrap())
+            .await?;
 
         // s.exists("location".into()).await?;
-
         Ok(())
     }
 }

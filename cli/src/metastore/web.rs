@@ -15,6 +15,7 @@ use axum::{
 pub fn setup_web_routes(metastore_client: MetastoreClient) -> Router {
     Router::new()
         .route("/metastore/indexes", put(handle_put_index))
+        .route("/metastore/indexes/{index_name}", get(handle_get_index))
         .route("/metastore/indexes", get(handle_list_indexes))
         .route(
             "/metastore/indexes/{index_name}",
@@ -32,6 +33,17 @@ async fn handle_put_index(
         .await
         .map_err(|err| ApiResponse::error(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(ApiResponse::ok("OK", None))
+}
+
+async fn handle_get_index(
+    Path(index_name): Path<String>,
+    State(state): State<MetastoreClient>,
+) -> Result<ApiOk<IndexMeta>, ApiError> {
+    let index =state
+        .get_index(&index_name)
+        .await
+        .map_err(|err| ApiResponse::error(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    Ok(ApiResponse::ok("OK", Some(index)))
 }
 
 async fn handle_list_indexes(

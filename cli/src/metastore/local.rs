@@ -3,9 +3,10 @@ use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
 use hashbrown::{HashMap, hash_map::Entry};
+use tantivy::index;
 use tokio::{fs, sync::Mutex};
 
-use crate::common::index::IndexMeta;
+use crate::common::index::{IndexMeta, SplitMeta};
 
 const METASTORE_DIR: &str = "metastore";
 
@@ -16,11 +17,14 @@ pub struct LocalMetastore {
 }
 
 impl LocalMetastore {
-    pub fn new(data_dir: PathBuf) -> Self {
-        LocalMetastore {
-            directory: data_dir.join(METASTORE_DIR),
+    pub async fn try_new(data_dir: &PathBuf) -> Result<Self> {
+        let directory = data_dir.join(METASTORE_DIR);
+        tokio::fs::create_dir_all(&directory).await?;
+        //TO FIX: TBH everyone should be responsible for init its own folder
+        Ok(LocalMetastore {
+            directory,
             indexes: Arc::new(Mutex::new(HashMap::new())),
-        }
+        })
     }
 
     pub async fn load_indexes(&self) -> Result<()> {
@@ -55,10 +59,17 @@ impl LocalMetastore {
         Ok(())
     }
 
+    pub async fn get_index(&self, index_name: &str) -> Result<IndexMeta> {
+        let indexes = self.indexes.lock().await;
+        let index_meta = indexes.get(index_name)
+            .ok_or_else(|| anyhow!("index '{}' does not exist", index_name))?;
+        Ok(index_meta.clone())
+    }
+
     pub async fn delete_index(&self, index_name: &str) -> Result<()> {
         let mut indexes = self.indexes.lock().await;
         if !indexes.contains_key(index_name) {
-            return Err(anyhow!("Index '{}' does not exist", index_name));
+            return Err(anyhow!("index '{}' does not exist", index_name));
         }
         indexes.remove(index_name);
         let index_path = self.directory.join(index_name);
@@ -73,5 +84,13 @@ impl LocalMetastore {
             indexes.push(index_meta.clone());
         }
         Ok(indexes)
+    }
+
+    pub async fn put_split(&self, split_meta: SplitMeta) -> anyhow::Result<()> {
+        let mut indexes = self.indexes.lock().await;
+        let index_meta = indexes.get_mut(&split_meta.index_name)
+            .ok_or_else(|| anyhow!("index '{}' does not exist", split_meta.index_name))?;
+        index_meta.splits.push(split_meta);
+        Ok(())
     }
 }

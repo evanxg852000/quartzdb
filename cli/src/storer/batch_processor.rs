@@ -14,6 +14,7 @@ use tantivy::{Directory, doc};
 use tokio::sync::oneshot;
 
 use crate::common::index::{FieldType, IndexMeta, SplitMeta};
+use crate::metastore::client::MetastoreClient;
 use crate::storer::split::index_store::fast_field_collector::U64FastFieldCollector;
 use crate::storer::split::index_store::packed_directory::PackedDirectory;
 use crate::storer::split::index_store::packed_file::PackedFileWriter;
@@ -28,19 +29,21 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct StorerContext {
-    storage: Arc<dyn Storage>,
     index_meta: Arc<IndexMeta>,
+    storage: Arc<dyn Storage>,
+    metastore_client: MetastoreClient,
 }
 
 impl StorerContext {
-    pub async fn new(global_storage: Arc<dyn Storage>, index_meta: Arc<IndexMeta>) -> Result<Self> {
-        let mut storage = global_storage;
+    pub async fn new(index_meta: Arc<IndexMeta>, storage: Arc<dyn Storage>, metastore_client: MetastoreClient) -> Result<Self> {
+        let mut index_storage = storage;
         if let Some(index_storage_settings) = &index_meta.settings.storage {
-            storage = storage.swap_remote(&index_storage_settings.uri).await?; 
+            index_storage = index_storage.derive_remote(&index_storage_settings.uri).await?;
         }
         Ok(Self {
-            storage,
             index_meta,
+            storage: index_storage,
+            metastore_client,
         })
     }
 }
@@ -78,11 +81,10 @@ async fn put_batch(context: Arc<StorerContext>, batch: ProtoDocumentBatch) -> Re
     // build split & upload it
     let mut split_writer = SplitWriter::try_new(index_name, storage.clone()).await?;
     split_writer.write(batch, index_config).await?;
-    let _split_meta = split_writer.finalize().await?;
+    let split_meta = split_writer.finalize().await?;
 
     // publish it
-    //context.metastore_client.publish_split(split_meta).await?;
-
+    context.metastore_client.put_split(split_meta).await?;
     Ok(())
 }
 

@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use tokio::task::JoinHandle;
 use futures::stream::{self, StreamExt, TryStreamExt};
+use tokio::task::JoinHandle;
 
 use crate::common::index::IndexMeta;
 use crate::common::processors::ProcessorRegistry;
@@ -44,7 +44,8 @@ impl IndexerService {
         let index_processors = stream::iter(indexes)
             .map(|index_meta| async {
                 let index_name = index_meta.name.clone();
-                let processor = initialize_processor(self.storer_client.clone(), Arc::new(index_meta)).await?;
+                let processor =
+                    initialize_processor(self.storer_client.clone(), Arc::new(index_meta)).await?;
                 anyhow::Result::<_>::Ok((index_name, processor))
             })
             .buffer_unordered(20)
@@ -120,7 +121,7 @@ async fn handle_event(
                 .put_index(name.clone(), || {
                     initialize_processor(storage_client, Arc::new(index_meta))
                 })
-                .await;
+                .await?;
         }
         MetastoreEvent::IndexDeleted { name } => {
             processors_registry.delete_index(&name).await;

@@ -1,20 +1,20 @@
 use std::net::SocketAddr;
-use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use storage::StorageConfig;
 
 use crate::indexer::config::IndexerConfig;
 use crate::metastore::config::MetastoreConfig;
+use crate::storer::config::StorerConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuartzConfig {
     pub address: SocketAddr,
     pub endpoint: String,
-    pub data_dir: PathBuf,
+    pub storage: StorageConfig,
     pub metastore: MetastoreConfig,
     pub indexer: IndexerConfig,
-    pub storage: StorageConfig,
+    pub storer: StorerConfig,
 }
 
 impl Default for QuartzConfig {
@@ -23,10 +23,10 @@ impl Default for QuartzConfig {
         QuartzConfig {
             address: socket_addr,
             endpoint: format!("http://{}", socket_addr),
-            data_dir: PathBuf::from("./quartzdb_data"),
+            storage: StorageConfig::default(),
             metastore: MetastoreConfig::default(),
             indexer: IndexerConfig::default(),
-            storage: StorageConfig::default(),
+            storer: StorerConfig::default(),
         }
     }
 }

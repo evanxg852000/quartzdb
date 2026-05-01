@@ -1,6 +1,6 @@
 use tokio::sync::broadcast::{self, Sender};
 
-use crate::common::index::IndexMeta;
+use crate::common::index::{IndexMeta, SplitMeta};
 use crate::metastore::events::{MetastoreEvent, MetastoreEventStream};
 use crate::metastore::local::LocalMetastore;
 use std::sync::Arc;
@@ -28,6 +28,10 @@ impl MetastoreClient {
         Ok(())
     }
 
+    pub async fn get_index(&self, index_name: &str) -> anyhow::Result<IndexMeta> {
+        self.inner_impl.get_index(index_name).await
+    }
+
     pub async fn delete_index(&self, index_name: &str) -> anyhow::Result<()> {
         self.inner_impl.delete_index(index_name).await?;
         self.mailbox.send(MetastoreEvent::IndexDeleted {
@@ -39,6 +43,12 @@ impl MetastoreClient {
     pub async fn list_indexes(&self) -> anyhow::Result<Vec<IndexMeta>> {
         self.inner_impl.list_indexes().await
     }
+
+    pub async fn put_split(&self, split_meta: SplitMeta) -> anyhow::Result<()> {
+        self.inner_impl.put_split(split_meta).await?;
+        Ok(())
+    }
+
 
     pub fn subscribe_to_events(&self) -> MetastoreEventStream {
         self.mailbox.subscribe()

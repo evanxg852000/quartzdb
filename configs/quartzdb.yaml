@@ -2,11 +2,14 @@
 storage:
   directory: "./qtzdb_data"
   uri: s3://quartzdb-bucket/
-  cache: 
+  cache: # overridable at service level
     policy: lru
-    capacity: 2GB
-# storage_dir: "./qtzdb_data"
-# storage_uri: s3://quartzdb-bucket/
+    capacity: 3
+
+storer:
+  cache: # override the above cache whether present or not
+    policy: lru
+    capacity: 2
 
 
 metastore:

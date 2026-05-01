@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use anyhow::Result;
 use datafusion::{
@@ -6,9 +6,7 @@ use datafusion::{
         ArrayRef, BooleanArray, Float64Array, Int64Array, LargeStringBuilder, RecordBatch,
         StringArray, TimestampNanosecondBuilder, UInt64Array,
     },
-    parquet::{
-        arrow::AsyncArrowWriter, basic::Compression, file::properties::WriterProperties,
-    },
+    parquet::{arrow::AsyncArrowWriter, basic::Compression, file::properties::WriterProperties},
 };
 use fastbloom::BloomFilter;
 use proto::quartzdb::{FieldValue, ProtoDocumentBatch};
@@ -22,7 +20,7 @@ use crate::{
         index::{FieldType, IndexConfig, SplitMeta},
         schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema},
     },
-    storer::{split::index_store::packed_file::PackedFileWriter, storage_impl::StorageImpl},
+    storer::{split::index_store::packed_file::PackedFileWriter},
 };
 
 const INDEXING_MEMORY_BUDGET: usize = 50 * 1024 * 1024;
@@ -40,9 +38,7 @@ pub struct SplitWriter {
 impl SplitWriter {
     pub async fn try_new(index_name: String, storage: Arc<dyn Storage>) -> Result<Self> {
         let split_id = uuid::Uuid::now_v7().to_string();
-        let split_dir = storage.root()
-            .join(&index_name)
-            .join(&split_id);
+        let split_dir = storage.root().join(&index_name).join(&split_id);
         let scratch_dir = storage.tempdir()?;
         Ok(Self {
             split_id,
@@ -87,6 +83,7 @@ impl SplitWriter {
         // create tantivy index & bloom filter
         let fts_schema = Schema::get_fts_schema();
         let index = tantivy::Index::create_in_dir(&self.scratch_dir, fts_schema.clone())?;
+        
         let mut index_writer = index.writer_with_num_threads(2, INDEXING_MEMORY_BUDGET)?;
         let mut bloom_filter = BloomFilter::with_false_pos(0.001).expected_items(batch.len());
 
@@ -107,15 +104,15 @@ impl SplitWriter {
         let segment_ids = index
             .searchable_segments()?
             .iter()
-            .map(|s| s.id())
+            .map(|segment| segment.id())
             .collect::<Vec<_>>();
         index_writer.merge(&segment_ids).await?;
         index_writer.wait_merging_threads()?;
 
-        // pack resulting index files & bloom filter file into split_id.idx
-        let index_file_path = self.split_dir.join("index.qtz");
+        // pack resulting index files & bloom filter file into split_id/index.qtz
+        let scratch_index_file_path = self.scratch_dir.as_ref().join("index.qtz");
         let index_dir_manager = index.directory();
-        let mut file_packer = PackedFileWriter::new(index_file_path).await?;
+        let mut file_packer = PackedFileWriter::new(&scratch_index_file_path).await?;
         for path in index_dir_manager.list_managed_files() {
             let moved_dir = index_dir_manager.clone();
             let moved_path = path.clone();
@@ -133,6 +130,13 @@ impl SplitWriter {
 
         // finalize index file packing
         file_packer.finilize().await?;
+        
+        // put index file in storage (upload)
+        let index_file_path = self.split_dir.join("index.qtz");
+        self.storage.put_large(
+            &scratch_index_file_path, 
+            &index_file_path, 
+        ).await?;
         Ok(())
     }
 
@@ -209,13 +213,17 @@ impl SplitWriter {
             .set_compression(Compression::SNAPPY)
             .set_max_row_group_row_count(Some(1024 * 2))
             .build();
-        let data_file_path = self.split_dir.join("data.qtz");
-        let batch = RecordBatch::try_new(data_schema, column_data).unwrap();
-        let data_file = tokio::fs::File::create(data_file_path).await?;
+        let scratch_data_file_path = self.scratch_dir.as_ref().join("data.qtz");
+        let batch: RecordBatch = RecordBatch::try_new(data_schema, column_data).unwrap();
+        let data_file = tokio::fs::File::create(&scratch_data_file_path).await?;
         let mut parquet_writer =
             AsyncArrowWriter::try_new(data_file, batch.schema(), Some(parquet_opts))?;
         parquet_writer.write(&batch).await?;
         parquet_writer.close().await?;
+
+        // put data file in storage (upload)
+        let data_file_path = self.split_dir.join("data.qtz");
+        self.storage.put_large(&scratch_data_file_path, &data_file_path).await?;
         Ok(())
     }
 }

@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use anyhow::Ok;
 use tokio::fs;
 use tokio_util::io::ReaderStream;
 
@@ -13,17 +12,15 @@ use crate::metastore::service::MetastoreService;
 use crate::storer::service::StorerService;
 
 pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
-    let data_dir = config.data_dir.clone();
+    // initilize data directory
+    let data_dir = config.storage.directory.clone();
+    tokio::fs::create_dir_all(&data_dir).await?;
 
-    // initilize base storage
-    tokio::fs::create_dir_all(data_dir.clone()).await?;
-    let storage = config.storage.build().await?;
-
-    let mut metastore_service = MetastoreService::new(data_dir.clone());
+    let mut metastore_service = MetastoreService::try_new(&config).await?;
     metastore_service.start().await?;
     let metastore_client = metastore_service.new_client();
 
-    let mut storer_service = StorerService::new(storage, metastore_client.clone());
+    let mut storer_service = StorerService::new(&config, metastore_client.clone()).await?;
     storer_service.start().await?;
     let storer_client = storer_service.new_client();
 

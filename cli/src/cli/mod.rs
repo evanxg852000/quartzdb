@@ -10,7 +10,7 @@ use config::Config;
 
 use crate::common::config::QuartzConfig;
 
-const CONFIG_FILE_BASE_NAME: &str = "quartzdb";
+const CONFIG_FILE_BASE_NAME: &str = "quartzdb.yaml";
 const CONFIG_ENV_PREFIX: &str = "QUARTZDB";
 
 #[derive(Subcommand)]
