@@ -1,0 +1,14 @@
+[package]
+name = "logsql-parser"
+description = "A parser for the VictoriLogs LogsQL language in rust"
+
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow = {workspace = true}

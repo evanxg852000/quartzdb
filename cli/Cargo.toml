@@ -1,0 +1,52 @@
+[package]
+name = "cli"
+description = "QuartzDB binary"
+
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+authors.workspace = true
+license.workspace = true
+
+default-run = "quartzdb"
+
+[[bin]]
+name = "quartzdb"
+path = "src/main.rs"
+
+[dependencies]
+config = { workspace = true }
+clap = { workspace = true }
+hashbrown = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_norway = { workspace = true }
+axum = { workspace = true }
+reqwest = { workspace = true }
+url = { workspace = true }
+object_store = { workspace = true }
+datafusion = { workspace = true }
+tantivy = { workspace = true }
+json_dotpath = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
+chrono = { workspace = true }
+jiff = { workspace = true }
+uuid = { workspace = true }
+iceberg = { workspace = true }
+tempfile = { workspace = true }
+fastbloom = { workspace = true }
+bincode = { workspace = true }
+futures = { workspace = true }
+
+proto = { workspace = true }
+storage = { workspace = true }
+
+
+[build-dependencies]
+chrono = "0.4"

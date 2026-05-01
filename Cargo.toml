@@ -1,19 +1,18 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 
 members = [
-    "quartz-cli",
-    # "quartz-insert",
-    # "log-store",
-    # "quartz-common",
-    # "quartz-data-model",
-    # "quartz-index",
-    
-    # "quartz-log-store",
-    # "quartz-select",
-    # "quartz-storage",
-    # "quartz-metastore",
+    "cli",
+    "proto",
+    "storage",
+
+    "logsql-parser",
+    # "indexer",
+    # "searcher",
+    # "storer",
 ]
+
+exclude = ["df-example"]
 
 [workspace.package]
 version = "0.0.1"
@@ -25,36 +24,60 @@ authors = ["Evance Soumaoro, <evanxg852000@gmail.com>"]
 license = "AGPL-3.0"
 
 [workspace.dependencies]
-redb = "4.0.0"
-hashbrown = "0.17.0"
-axum = { version = "0.8.9", features = ["macros"] }
+redb = "4.0"
+hashbrown = "0.17"
+async-trait = "0.1.89"
+axum = { version = "0.8", features = ["macros"] }
 crossbeam = "0.8"
 integer-encoding = "4.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+json_dotpath = "1.1"
 serde_norway = "0.9"
-tantivy = "0.22.0"
 rmp = "0.8"
 rmp-serde = "1.3"
 tokio = { version = "1.0", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
+futures-util = "0.3"
+futures = "0.3"
 clap = { version = "4.0", features = ["derive"] }
 anyhow = "1.0"
 thiserror = "1.0"
 log = "0.4"
 env_logger = "0.9"
 chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["serde", "v4"] }
+jiff = "0.2"
+uuid = { version = "1.0", features = ["serde", "v7"] }
 lz4 = "1.24.0"
-lz4_flex = "0.9.0"
+lz4_flex = "0.9"
 snap = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 bson = "3.1.0"
-config = { version = "0.15.22", features = ["yaml"] }
-reqwest = { version = "0.13.2", features = ["json"] }
-url = { version = "2.5.8", features = ["serde"] }
-object_store = { version = "0.13.2", features = ["fs", "aws", "gcp", "azure"] }
-bloomfilter = "3.0.1"
+config = { version = "0.15", features = ["yaml"] }
+reqwest = { version = "0.13", features = ["json", "stream"] }
+url = { version = "2.5", features = ["serde"] }
+object_store = { version = "0.13", features = ["fs", "aws", "gcp", "azure"] }
+bloomfilter = "3.0"
+datafusion = "53.1"
+tantivy = "0.26"
+lance = "4.0"
+lance-datafusion = "4.0"
+prost = "0.13"
+prost-types = "0.13"
+tonic = "0.12"
+tonic-reflection = "0.12"
+tonic-build = "0.12"
+prost-build = "0.13"
+iceberg = "0.9.0"
+tempfile = "3.10"
+bytes = "1.11"
+fastbloom = { version = "0.17", features = ["serde"] }
+bincode = "1.3"
+
+proto = { path = "proto" }
+storage = { path = "storage" }
+
 
 # quartz-insert = { path = "quartz-insert" }
 # quartz-common ={ path = "quartz-common" }

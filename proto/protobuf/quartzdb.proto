@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package quartzdb;
+
+message FieldValue {
+    oneof kind {
+        uint64 uint_val= 1;
+        int64 int_val = 2;
+        double float_val = 3;
+        string string_val = 4;
+        bool bool_val = 5;
+    }
+}
+
+message ProtoDocument {
+    // timestamp in nanoseconds precision
+    int64 timestamp = 2;
+    // source document as json string
+    string source = 3;
+    // extracted field values
+    repeated FieldValue values = 4;
+    // extracted label values object serialized as json string (fts)
+    string labels = 5;
+    // extracted  tag values
+    repeated string tags = 6;
+}
+
+message ProtoDocumentBatch {
+    string id = 1;
+    repeated ProtoDocument documents = 2;
+}

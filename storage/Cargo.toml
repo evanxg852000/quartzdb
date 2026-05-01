@@ -1,0 +1,27 @@
+[package]
+name = "storage"
+description = "storage layer abstraction"
+
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+hashbrown = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+object_store = { workspace = true}
+async-trait = { workspace = true}
+tempfile = { workspace = true}
+bytes = { workspace = true}
+url =  { workspace = true}
+futures = { workspace = true }
+serde = { workspace = true }
+
+stream_shared = "0.8.6"
+tokio-stream = "0.1.18"

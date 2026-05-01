@@ -1,0 +1,20 @@
+
+storage:
+  directory: "./qtzdb_data"
+  uri: s3://quartzdb-bucket/
+  cache: # overridable at service level
+    policy: lru
+    capacity: 3
+
+storer:
+  cache: # override the above cache whether present or not
+    policy: lru
+    capacity: 2
+
+
+metastore:
+  type: local
+  # type: postgres
+  # connection_string: "postgresql://user:password@localhost:5432/quartzdb
+  # type: local
+  # directory: "./data/metastore"
