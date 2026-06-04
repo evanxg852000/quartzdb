@@ -9,5 +9,7 @@ pub mod web;
 // so that they can download or delete from their local fs if they are responsible
 // The storer node:
 //  - creates splits
-//  - merges splits
+//  - merges splits (compaction)
 //  - run retention policy to delete splits
+
+pub fn setup_proxy(client: client::MetastoreClient) {}

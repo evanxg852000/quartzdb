@@ -13,7 +13,7 @@ use crate::common::{
 };
 use crate::storer::client::StorerServiceClient;
 
-use proto::quartzdb::{ProtoDocument, ProtoDocumentBatch};
+use common::proto::{ProtoDocument, ProtoDocumentBatch};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ValidationError {

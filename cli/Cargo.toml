@@ -41,11 +41,16 @@ uuid = { workspace = true }
 iceberg = { workspace = true }
 tempfile = { workspace = true }
 fastbloom = { workspace = true }
-bincode = { workspace = true }
 futures = { workspace = true }
+tonic = { workspace = true }
+bitcode = { workspace = true }
 
-proto = { workspace = true }
+common = { workspace = true }
+configs = { workspace = true }
 storage = { workspace = true }
+metastore = { workspace = true }
+storer = { workspace = true }
+ingester = { workspace = true }
 
 
 [build-dependencies]

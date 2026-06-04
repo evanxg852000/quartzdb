@@ -4,14 +4,11 @@
 # start server
 cargo run -- run
 
-# create index
-cargo run -- index create --file ./tests/data/logs-index-config.yaml
+# upsert table
+cargo run -- table put --file ./tests/data/logs-index-config.yaml
 
-# update index
-cargo run -- index update --file ./tests/data/logs-index-config.yaml
-
-# list indexes
-cargo run -- index list
+# list tables
+cargo run -- table list
 
 # ingest data
 cargo run -- ingest --name logs --file ./tests/data/sample-logs.ndjson
@@ -19,5 +16,5 @@ cargo run -- ingest --name logs --file ./tests/data/sample-logs.ndjson
 # query data
 cargo run -- query --
 
-# delete index
-cargo run -- index delete --name logs
+# delete table
+cargo run -- table delete --name logs

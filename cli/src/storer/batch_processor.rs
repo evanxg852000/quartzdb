@@ -1,31 +1,15 @@
 use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
-use datafusion::arrow::array::{
-    ArrayRef, BooleanArray, Float64Array, Int64Array, LargeStringBuilder, RecordBatch, StringArray,
-    TimestampNanosecondBuilder, UInt64Array,
-};
-use datafusion::parquet::arrow::AsyncArrowWriter;
-use proto::quartzdb::{FieldValue, ProtoDocumentBatch};
+
+use common::proto::ProtoDocumentBatch;
 use storage::Storage;
-use storage::remote_storage::RemoteStorage;
-use tantivy::query::QueryParser;
-use tantivy::{Directory, doc};
 use tokio::sync::oneshot;
 
-use crate::common::index::{FieldType, IndexMeta, SplitMeta};
+use crate::common::index::IndexMeta;
+use crate::common::processors::Processor;
 use crate::metastore::client::MetastoreClient;
-use crate::storer::split::index_store::fast_field_collector::U64FastFieldCollector;
-use crate::storer::split::index_store::packed_directory::PackedDirectory;
-use crate::storer::split::index_store::packed_file::PackedFileWriter;
 use crate::storer::split::writter::SplitWriter;
-use crate::{
-    common::{
-        processors::Processor,
-        schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema},
-    },
-    storer::storage_impl::StorageImpl,
-};
 
 #[derive(Debug, Clone)]
 pub struct StorerContext {
@@ -35,10 +19,16 @@ pub struct StorerContext {
 }
 
 impl StorerContext {
-    pub async fn new(index_meta: Arc<IndexMeta>, storage: Arc<dyn Storage>, metastore_client: MetastoreClient) -> Result<Self> {
+    pub async fn new(
+        index_meta: Arc<IndexMeta>,
+        storage: Arc<dyn Storage>,
+        metastore_client: MetastoreClient,
+    ) -> Result<Self> {
         let mut index_storage = storage;
         if let Some(index_storage_settings) = &index_meta.settings.storage {
-            index_storage = index_storage.derive_remote(&index_storage_settings.uri).await?;
+            index_storage = index_storage
+                .derive_remote(&index_storage_settings.uri)
+                .await?;
         }
         Ok(Self {
             index_meta,
@@ -68,7 +58,7 @@ impl BatchProcessor {
         put_batch(self.context.clone(), batch).await?;
         reply_sender
             .send(())
-            .map_err(|_| anyhow!("Failed to send on reply mailbox"))?;
+            .map_err(|_| anyhow!("failed to send on reply mailbox"))?;
         Ok(())
     }
 }

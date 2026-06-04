@@ -1,6 +1,6 @@
 use tokio::sync::{mpsc, oneshot};
 
-use proto::quartzdb::ProtoDocumentBatch;
+use common::proto::ProtoDocumentBatch;
 
 pub type StorageServiceMailbox = mpsc::Sender<StorageServiceCommand>;
 

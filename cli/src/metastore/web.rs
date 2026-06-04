@@ -39,7 +39,7 @@ async fn handle_get_index(
     Path(index_name): Path<String>,
     State(state): State<MetastoreClient>,
 ) -> Result<ApiOk<IndexMeta>, ApiError> {
-    let index =state
+    let index = state
         .get_index(&index_name)
         .await
         .map_err(|err| ApiResponse::error(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;

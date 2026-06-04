@@ -49,7 +49,6 @@ impl MetastoreClient {
         Ok(())
     }
 
-
     pub fn subscribe_to_events(&self) -> MetastoreEventStream {
         self.mailbox.subscribe()
     }

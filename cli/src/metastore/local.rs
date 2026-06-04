@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use anyhow::{Result, anyhow};
 use hashbrown::{HashMap, hash_map::Entry};
-use tantivy::index;
 use tokio::{fs, sync::Mutex};
 
 use crate::common::index::{IndexMeta, SplitMeta};
@@ -61,7 +60,8 @@ impl LocalMetastore {
 
     pub async fn get_index(&self, index_name: &str) -> Result<IndexMeta> {
         let indexes = self.indexes.lock().await;
-        let index_meta = indexes.get(index_name)
+        let index_meta = indexes
+            .get(index_name)
             .ok_or_else(|| anyhow!("index '{}' does not exist", index_name))?;
         Ok(index_meta.clone())
     }
@@ -88,7 +88,8 @@ impl LocalMetastore {
 
     pub async fn put_split(&self, split_meta: SplitMeta) -> anyhow::Result<()> {
         let mut indexes = self.indexes.lock().await;
-        let index_meta = indexes.get_mut(&split_meta.index_name)
+        let index_meta = indexes
+            .get_mut(&split_meta.index_name)
             .ok_or_else(|| anyhow!("index '{}' does not exist", split_meta.index_name))?;
         index_meta.splits.push(split_meta);
         Ok(())

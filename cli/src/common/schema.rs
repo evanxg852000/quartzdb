@@ -4,7 +4,7 @@ use anyhow::{Result, anyhow};
 use datafusion::common::arrow::datatypes::{self as datafusion_schema};
 use jiff::Timestamp;
 use json_dotpath::DotPaths;
-use proto::quartzdb::FieldValue;
+use common::proto::FieldValue;
 use serde_json::Value as JsonValue;
 use tantivy::schema::{self as tantivy_schema};
 

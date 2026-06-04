@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use storage::{StorageConfig, cachable_storage::CacheConfig};
+use storage::cachable_storage::CacheConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StorerConfig {

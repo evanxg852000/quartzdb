@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package quartzdb;
+
+import "quartzdb.proto";
+
+
+message FetchEventsRequest{
+  optional uint64 last_checkin = 1;
+}
+
+message FetchEventsResponse {
+  // Serialized version of Vec<common::MetastoreEvent>
+  bytes events = 1;
+}
+
+message ListTablesRequest {
+}
+
+message ListTablesResponse {
+  // Serialized version of Vec<common::TableMeta>
+  bytes tables = 1;
+}
+
+message PutTableRequest {
+  // Serialized version of common::TableMeta
+  bytes table = 1;
+}
+
+message PutTableResponse {
+}
+
+message GetTableRequest {
+  string name = 1;
+}
+
+message GetTableResponse {
+  // Serialized version of common::TableMeta
+  bytes table = 1;
+}
+
+message DeleteTableRequest {
+  string name = 1;
+}
+
+message DeleteTableResponse {
+}
+
+// The metastore service gRPC definition
+service GrpcMetastoreService {  
+    rpc FetchEvents(FetchEventsRequest) returns (FetchEventsResponse);
+    
+    rpc ListTables(ListTablesRequest) returns (ListTablesResponse);
+    rpc PutTable(PutTableRequest) returns (PutTableResponse);
+    rpc GetTable(GetTableRequest) returns (GetTableResponse);
+    rpc DeleteTable(DeleteTableRequest) returns (DeleteTableResponse);
+
+    // rpc listSplits(ListSplitsRequest) returns (ListSplitsResponse);
+    // rpc putSplit(PutSplitRequest) returns (PutSplitResponse);
+    // rpc getSplit(GetSplitRequest) returns (GetSplitResponse);
+    // rpc deleteSplit(DeleteSplitRequest) returns (DeleteSplitResponse);
+}

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Result;
 use datafusion::{
@@ -9,7 +9,7 @@ use datafusion::{
     parquet::{arrow::AsyncArrowWriter, basic::Compression, file::properties::WriterProperties},
 };
 use fastbloom::BloomFilter;
-use proto::quartzdb::{FieldValue, ProtoDocumentBatch};
+use common::proto::{FieldValue, ProtoDocumentBatch};
 use storage::Storage;
 use tempfile::TempDir;
 
@@ -20,7 +20,7 @@ use crate::{
         index::{FieldType, IndexConfig, SplitMeta},
         schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema},
     },
-    storer::{split::index_store::packed_file::PackedFileWriter},
+    storer::split::index_store::packed_file::PackedFileWriter,
 };
 
 const INDEXING_MEMORY_BUDGET: usize = 50 * 1024 * 1024;
@@ -83,7 +83,7 @@ impl SplitWriter {
         // create tantivy index & bloom filter
         let fts_schema = Schema::get_fts_schema();
         let index = tantivy::Index::create_in_dir(&self.scratch_dir, fts_schema.clone())?;
-        
+
         let mut index_writer = index.writer_with_num_threads(2, INDEXING_MEMORY_BUDGET)?;
         let mut bloom_filter = BloomFilter::with_false_pos(0.001).expected_items(batch.len());
 
@@ -125,18 +125,17 @@ impl SplitWriter {
         }
 
         // add bloom filter file as filter.bin
-        let bloom_fileter_data: Vec<u8> = bincode::serialize(&bloom_filter)?;
+        let bloom_fileter_data= bitcode::serialize(&bloom_filter)?;
         file_packer.add("bloom.qtz", bloom_fileter_data).await?;
 
         // finalize index file packing
         file_packer.finilize().await?;
-        
+
         // put index file in storage (upload)
         let index_file_path = self.split_dir.join("index.qtz");
-        self.storage.put_large(
-            &scratch_index_file_path, 
-            &index_file_path, 
-        ).await?;
+        self.storage
+            .put_large(&scratch_index_file_path, &index_file_path)
+            .await?;
         Ok(())
     }
 
@@ -223,7 +222,9 @@ impl SplitWriter {
 
         // put data file in storage (upload)
         let data_file_path = self.split_dir.join("data.qtz");
-        self.storage.put_large(&scratch_data_file_path, &data_file_path).await?;
+        self.storage
+            .put_large(&scratch_data_file_path, &data_file_path)
+            .await?;
         Ok(())
     }
 }

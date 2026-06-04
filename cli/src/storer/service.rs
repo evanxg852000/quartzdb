@@ -50,9 +50,12 @@ impl StorerService {
         let index_processors = stream::iter(indexes)
             .map(|index_meta| async {
                 let index_name = index_meta.name.clone();
-                let processor =
-                    initialize_processor(Arc::new(index_meta), self.storage.clone(), self.metastore_client.clone())
-                        .await?;
+                let processor = initialize_processor(
+                    Arc::new(index_meta),
+                    self.storage.clone(),
+                    self.metastore_client.clone(),
+                )
+                .await?;
                 anyhow::Result::<_>::Ok((index_name, processor))
             })
             .buffer_unordered(20)
@@ -64,7 +67,7 @@ impl StorerService {
 
         let processors_registry = self.processors.clone();
         let moved_storage = self.storage.clone();
-        let moved_metastore_client = self.metastore_client.clone(); 
+        let moved_metastore_client = self.metastore_client.clone();
         let handle = tokio::spawn(async move {
             loop {
                 tokio::select! {
@@ -143,7 +146,8 @@ async fn initialize_processor(
     storage: Arc<dyn Storage>,
     metastore_client: MetastoreClient,
 ) -> Result<(Arc<IndexMeta>, Arc<BatchProcessor>)> {
-    let context = Arc::new(StorerContext::new(index_meta.clone(), storage, metastore_client).await?);
+    let context =
+        Arc::new(StorerContext::new(index_meta.clone(), storage, metastore_client).await?);
     let processor = Arc::new(BatchProcessor::new(context));
     Ok((index_meta, processor))
 }

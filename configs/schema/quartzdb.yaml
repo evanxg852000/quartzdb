@@ -1,0 +1,39 @@
+# node id
+id: "node1" 
+
+# node socket address: host:port
+# http_port=port
+# grpc_port = http_port+1
+address: "127.0.0.1:8080" 
+
+storage:
+  directory: "./qtzdb_data"
+  uri: s3://quartzdb-bucket/
+  cache: # overridable at service level
+    policy: lru
+    capacity: 3 # 3GB
+
+#type -> [fs, memory, sqlite, postgres, remote]
+metastore:
+  type: fs
+  # type: memory
+  # type: sqlite
+  # type: postgres
+  # uri: "postgresql://user:password@localhost:5432/quartzdb
+  # type: remote
+  # uri: "127.0.0.1:8081"
+
+ingester:
+  enable: true
+
+searcher:
+  enable: true
+
+# (store, query, compact, retention)
+storer: 
+  enable: true
+  # cache: # override the above cache whether present or not
+  #   policy: lru
+  #   capacity: 2
+
+

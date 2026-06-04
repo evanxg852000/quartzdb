@@ -7,8 +7,7 @@ use std::{env, net::SocketAddr};
 use anyhow::Ok;
 use clap::{Parser, Subcommand};
 use config::Config;
-
-use crate::common::config::QuartzConfig;
+use configs::QuartzConfig;
 
 const CONFIG_FILE_BASE_NAME: &str = "quartzdb.yaml";
 const CONFIG_ENV_PREFIX: &str = "QUARTZDB";
@@ -31,16 +30,16 @@ pub enum Commands {
         #[arg(short, long)]
         query: String,
     },
-    Index {
+    Table {
         #[command(subcommand)]
-        action: IndexSubcommands,
+        action: TableSubcommands,
     },
 }
 
 #[derive(Subcommand)]
-pub enum IndexSubcommands {
+pub enum TableSubcommands {
     List,
-    Create {
+    Put {
         #[arg(short, long)]
         file: PathBuf,
     },
@@ -93,13 +92,13 @@ pub async fn run_cli() -> anyhow::Result<()> {
         Some(Commands::Query { name, query }) => {
             handlers::handle_query(config, &name, &query).await?
         }
-        Some(Commands::Index { action }) => match action {
-            IndexSubcommands::List => handlers::handle_index_list(config).await?,
-            IndexSubcommands::Create { file } => {
-                handlers::handle_index_create(config, file).await?
+        Some(Commands::Table { action }) => match action {
+            TableSubcommands::List => handlers::handle_table_list(config).await?,
+            TableSubcommands::Put { file } => {
+                handlers::handle_table_put(config, file).await?
             }
-            IndexSubcommands::Delete { name } => {
-                handlers::handle_index_delete(config, &name).await?
+            TableSubcommands::Delete { name } => {
+                handlers::handle_table_delete(config, &name).await?
             }
         },
         _ => {
@@ -133,8 +132,11 @@ fn load_config(
         .build()?;
 
     let mut config = settings.try_deserialize::<QuartzConfig>()?;
-    if let Some(endpoint) = overriden_endpoint {
-        config.endpoint = endpoint
+    if let Some(target) = overriden_endpoint {
+        config.target = Some(target)
     }
+
+    println!("EVAN: {:?}", config);
+
     Ok(config)
 }

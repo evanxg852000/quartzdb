@@ -1,5 +1,5 @@
 use anyhow::Result;
-use proto::quartzdb::ProtoDocumentBatch;
+use common::proto::ProtoDocumentBatch;
 use tokio::sync::oneshot;
 
 use crate::storer::commands::{StorageServiceCommand, StorageServiceMailbox};

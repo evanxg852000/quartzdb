@@ -1,6 +1,10 @@
 use async_trait::async_trait;
 use bytes::Bytes;
-use std::{io, path::{Path, PathBuf}, sync::Arc};
+use std::{
+    io,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use url::Url;
 
 use crate::{BoxedBytesStream, Storage, object_storage::ObjectStorageWrapper};

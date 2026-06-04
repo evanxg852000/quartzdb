@@ -18,12 +18,13 @@ config:
       type: string
 
 settings:
-  storage:
-    type: remote
-    bucket: s3://mi.io/my-bucket
-  search:
+  # storage:
+    # uri: s3://mi.io/my-bucket # override the global storage.uri
+  searcher:
+    max_results: 1
     todo: TODO
-  ingest:
+  ingester:
+    num_worker: 3 # number of ingester worker for this table
     batch_size: 1000
     commit_timeout_secs: 5000
   retention:

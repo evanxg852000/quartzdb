@@ -1,8 +1,22 @@
+
+
 # QuartzDB
 An experimental time series database for learning
 
 https://github.com/datafusion-contrib/datafusion-distributed
+https://datafusion-contrib.github.io/datafusion-distributed/user-guide/concepts.html
+
 https://datafusion.apache.org/blog/2025/09/21/custom-types-using-metadata/
+
+## node types
+metastore
+ingester
+searcher
+storer (store, query, compact, retention)
+
+https://github.com/cloudflare/pingora
+
+
 
 ## few commands
 ```bash
@@ -10,26 +24,32 @@ https://datafusion.apache.org/blog/2025/09/21/custom-types-using-metadata/
 cargo run -- run
 
 # create index
-cargo run -- index create --file ./configs/index-config.yaml
+cargo run -- table put --file ./configs/schema/table-config.yaml
 
 # update index
 cargo run -- index update --file ./configs/index-config.yaml
 
 # list indexes
-cargo run -- index list
+cargo run -- table list
+
+# insert data
+cargo run -- ingest --name github_events --file ./tests/data/
 
 # delete index
-cargo run -- index delete --name github_events
+cargo run -- table delete --name github_events
 
+cargo run -- query --name foo --query "select * from foo"
 ```
 
 TODO:
-- [x] fix config
-- [ ] fix storage layering & index Context
-- [ ] split writter
-- [ ] basic query
-- [ ] logsql-parser
-- [ ] good caching mechanism
+- [x] fix storer
+- [x] split writter
+- [ ] basic query with datafusion-distributed (searcher)
+- [ ] tests
+- [ ] MVP
+- [ ] SQL -> QuestDB(SQL)/InfluxQL
+- [ ] QtzQL -> combine (LogsQL-parser, MetricsQL) from VitoriMetrics
+- [ ] caching mechanism
 
 https://www.bitsxpages.com/p/how-metrics-are-stored-and-queried
 
