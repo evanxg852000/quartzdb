@@ -46,6 +46,16 @@ message DeleteTableRequest {
 message DeleteTableResponse {
 }
 
+
+
+message PutSplitRequest {
+  // Serialized version of common::SplitMeta
+  bytes split = 1;
+}
+
+message PutSplitResponse {}
+
+
 // The metastore service gRPC definition
 service GrpcMetastoreService {  
     rpc FetchEvents(FetchEventsRequest) returns (FetchEventsResponse);
@@ -56,7 +66,7 @@ service GrpcMetastoreService {
     rpc DeleteTable(DeleteTableRequest) returns (DeleteTableResponse);
 
     // rpc listSplits(ListSplitsRequest) returns (ListSplitsResponse);
-    // rpc putSplit(PutSplitRequest) returns (PutSplitResponse);
+    rpc putSplit(PutSplitRequest) returns (PutSplitResponse);
     // rpc getSplit(GetSplitRequest) returns (GetSplitResponse);
     // rpc deleteSplit(DeleteSplitRequest) returns (DeleteSplitResponse);
 }

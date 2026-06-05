@@ -2,9 +2,7 @@ use async_trait::async_trait;
 
 use anyhow::Result;
 
-use bitcode::{Decode, Encode};
-use common::catalog::TableMeta;
-use serde::{Deserialize, Serialize};
+use common::catalog::{SplitMeta, TableMeta};
 
 use crate::events::MetastoreEvent;
 
@@ -18,6 +16,8 @@ pub trait MetastoreService: Send + Sync + 'static {
     async fn put_table(&self, table_meta: TableMeta) -> Result<()>;
     async fn get_table(&self, table_name: &str) -> Result<TableMeta>;
     async fn delete_table(&self, table_name: &str) -> Result<()>;
+
+    async fn put_split(&self, split_meta: SplitMeta) -> Result<()>;
 
 
 }

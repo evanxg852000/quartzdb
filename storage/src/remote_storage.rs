@@ -27,18 +27,6 @@ impl RemoteStorage {
     }
 
     pub(crate) fn create_remote_store(uri: impl Into<String>) -> Result<Arc<dyn ObjectStore>> {
-        // use object_store::parse_url_opts;
-        // use url::Url;
-        // let url = Url::parse("s3://my-bucket/data")?;
-        // let options = vec![
-        //     ("aws_access_key_id", "my_key"),
-        //     ("aws_secret_access_key", "my_secret"),
-        //     ("endpoint", "http://localhost:9000"), // For MinIO
-        //     ("allow_http", "true"),
-        // ];
-
-        // let (store, path) = parse_url_opts(&url, options)?;
-
         let aws_store = AmazonS3Builder::new()
             .with_endpoint(uri)
             .with_bucket_name("my-bucket")
@@ -78,7 +66,10 @@ impl Storage for RemoteStorage {
     // }
 
     async fn put(&self, to: &str, data: Bytes) -> io::Result<()> {
-        tokio::try_join!(self.local.put(to, data.clone()), self.remote.put(to, data),)?;
+        tokio::try_join!(
+            self.local.put(to, data.clone()), 
+            self.remote.put(to, data),
+        )?;
         Ok(())
     }
 

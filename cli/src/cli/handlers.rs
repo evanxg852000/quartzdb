@@ -33,22 +33,17 @@ async fn run_grpc_server(grpc_router: Routes, grpc_address: SocketAddr) -> anyho
 }
 
 pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
-    // initilize data directory
-    let data_dir = config.storage.directory.clone();
-    tokio::fs::create_dir_all(&data_dir).await?;
+    println!("{:?}", config);
 
     let mut services_router = axum::Router::new();
     let mut grpc_router_builder = Routes::builder();
-
-    // initilize storage
-    let storage = config.storage.build().await?;
 
     // initilize metastore
     let MetastoreServiceStartResult {
         metastore_client,
         metastore_http_router,
         metastore_grpc_service_opt,
-    } = metastore::start_metastore_service(&config.metastore, storage.clone()).await?;
+    } = metastore::start_metastore_service(&config.metastore, &config.storage).await?;
     services_router = services_router.merge(metastore_http_router);
     if let Some(metastore_grpc_service) = metastore_grpc_service_opt {
         grpc_router_builder.add_service(metastore_grpc_service);
@@ -61,7 +56,7 @@ pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
                 storer_client,
                 storer_store_grpc_service,
                 ..
-            } = storer::start_storer_service(&config.storer, storage.clone(), metastore_client.clone()).await?;
+            } = storer::start_storer_service(&config.storer, &config.storage, metastore_client.clone()).await?;
             grpc_router_builder.add_service(storer_store_grpc_service);
             Some(storer_client)
         },
@@ -72,7 +67,7 @@ pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
         println!("Starting ingester service...");
         let IngesterServiceStartResult {
             ingester_http_router,
-        } = ingester::start_ingester_service(&config.ingester, storage.clone(), metastore_client, storer_client.clone()).await?;
+        } = ingester::start_ingester_service(&config.ingester, &config.storage, metastore_client, storer_client.clone()).await?;
         services_router = services_router.merge(ingester_http_router);
     }
 

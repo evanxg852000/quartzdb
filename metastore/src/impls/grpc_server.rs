@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use common::proto::{
-    DeleteTableRequest, DeleteTableResponse, FetchEventsRequest, FetchEventsResponse, GetTableRequest, GetTableResponse, ListTablesRequest, ListTablesResponse, PutTableRequest, PutTableResponse, grpc_metastore_service_server::GrpcMetastoreService
+    DeleteTableRequest, DeleteTableResponse, FetchEventsRequest, FetchEventsResponse, GetTableRequest, GetTableResponse, ListTablesRequest, ListTablesResponse, PutSplitRequest, PutSplitResponse, PutTableRequest, PutTableResponse, grpc_metastore_service_server::GrpcMetastoreService
 };
 use tonic::{Request, Response, Status};
 
@@ -79,5 +79,18 @@ impl GrpcMetastoreService for GrpcServerMetastoreServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(DeleteTableResponse{}))
+    }
+
+    async fn put_split(
+        &self,
+        request: Request<PutSplitRequest>,
+    ) -> Result<Response<PutSplitResponse>, Status> {
+        let split = request.into_inner().split;
+        let split_meta = bitcode::deserialize(&split)
+            .map_err(|e| Status::internal(e.to_string()))?;
+        self.inner.put_split(split_meta)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        Ok(Response::new(PutSplitResponse{}))
     }
 }

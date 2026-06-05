@@ -77,7 +77,6 @@ pub async fn run_cli() -> anyhow::Result<()> {
         command,
     } = CliApp::parse();
     let mut config = load_config(overriden_config, overriden_endpoint)?;
-    // println!("config: {:?}", config);
 
     match command {
         Some(Commands::Run { address }) => {
@@ -135,8 +134,6 @@ fn load_config(
     if let Some(target) = overriden_endpoint {
         config.target = Some(target)
     }
-
-    println!("EVAN: {:?}", config);
 
     Ok(config)
 }

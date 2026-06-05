@@ -10,7 +10,6 @@ pub struct StorerFactory{}
 
 impl StorerFactory {
     pub async fn build(_config: &StorerConfig, table_processor_registry: Arc<TableProcessorRegistry>) -> Result<Arc<dyn StorerService>> {
-        //TODO: configure storage with cache
         let storer: Arc<dyn StorerService> = Arc::new(FileSystemStorerServiceImpl::new(table_processor_registry));
         Ok(storer)
     }

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{error::Error, sync::Arc};
 
 use anyhow::Result;
 // use datafusion::{arrow::{array::{RecordBatch, StringBuilder}, datatypes::Field}, parquet::data_type::DataType};
@@ -51,6 +51,14 @@ impl ProcessingReport {
             num_docs: num_docs,
             accepted: true,
             errors: vec![],
+        }
+    }
+
+    pub fn from_error<E: ToString>(err: &E) -> Self {
+        Self { 
+            num_docs: 0,
+            accepted: false,
+            errors: vec![ValidationError::new("", 0, err.to_string())] 
         }
     }
 

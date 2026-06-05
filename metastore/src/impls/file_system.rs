@@ -19,7 +19,7 @@ use tokio::{fs, sync::Mutex};
 use crate::{events::MetastoreEvent, service::MetastoreService};
 
 
-const METASTORE_DIR: &str = "metastore";
+// const METASTORE_DIR: &str = "metastore";
 const TABLE_META_FILE: &str = "meta.json";
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -35,12 +35,12 @@ pub struct FileSystemMetastoreServiceImpl {
 }
 
 impl FileSystemMetastoreServiceImpl {
-    pub async fn try_new(data_dir: &PathBuf) -> Result<Self> {
-        let directory = data_dir.join(METASTORE_DIR);
-        tokio::fs::create_dir_all(&directory).await?;
+    pub async fn try_new(directory: &PathBuf) -> Result<Self> {
+        // let directory = data_dir.join(METASTORE_DIR);
+        // tokio::fs::create_dir_all(&directory).await?;
         let entries = Self::load_tables_from_file_system(&directory).await?;
         Ok(FileSystemMetastoreServiceImpl {
-            directory,
+            directory: directory.clone(),
             entries: Arc::new(Mutex::new(entries)),
         })
     }
@@ -120,6 +120,7 @@ impl FileSystemMetastoreServiceImpl {
         }
         Ok(entries)
     }
+
 }
 
 #[tonic::async_trait]
@@ -143,5 +144,9 @@ impl MetastoreService for FileSystemMetastoreServiceImpl {
 
     async fn delete_table(&self, table_name: &str) -> Result<()> {
         self.delete_table(table_name).await
+    }
+
+    async fn put_split(&self, split_meta: SplitMeta) -> Result<()> {
+        self.put_split(split_meta).await
     }
 }

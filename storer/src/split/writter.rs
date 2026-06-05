@@ -9,21 +9,13 @@ use datafusion::{
     parquet::{arrow::AsyncArrowWriter, basic::Compression, file::properties::WriterProperties},
 };
 use fastbloom::BloomFilter;
-use common::{catalog::{FieldType, SplitMeta, TableConfig}, proto::{FieldValue, ProtoDocumentBatch}, schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema}};
+use common::{catalog::{FieldType, FieldValue, SplitMeta, TableConfig}, schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema}};
 use storage::Storage;
 use tempfile::TempDir;
 
 use tantivy::{Directory, doc};
 
-use crate::split::index_store::packed_file::PackedFileWriter;
-
-// use crate::{
-//     common::{
-//         index::{FieldType, IndexConfig, SplitMeta},
-//         schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema},
-//     },
-//     storer::split::index_store::packed_file::PackedFileWriter,
-// };
+use crate::{document::StorerBatch, split::index_store::packed_file::PackedFileWriter};
 
 const INDEXING_MEMORY_BUDGET: usize = 50 * 1024 * 1024;
 
@@ -55,15 +47,13 @@ impl SplitWriter {
 
     pub async fn write(
         &mut self,
-        _batch: RecordBatch,
         table_config: &TableConfig,
+        batch: StorerBatch,
     ) -> Result<()> {
-        //TODO: fix
-        let batch = ProtoDocumentBatch::new("todo".to_string());
         self.min_timestamp = batch.min_timestamp();
         self.max_timestamp = batch.max_timestamp();
         self.write_index(&batch).await?;
-        self.write_data(batch, table_config).await?;
+        self.write_data(table_config, batch).await?;
         Ok(())
     }
 
@@ -83,7 +73,7 @@ impl SplitWriter {
         Ok(split_meta)
     }
 
-    async fn write_index(&self, batch: &ProtoDocumentBatch) -> Result<()> {
+    async fn write_index(&self, batch: &StorerBatch) -> Result<()> {        
         // create tantivy index & bloom filter
         let fts_schema = Schema::get_fts_schema();
         let index = tantivy::Index::create_in_dir(&self.scratch_dir, fts_schema.clone())?;
@@ -93,13 +83,12 @@ impl SplitWriter {
 
         let row_index_field = fts_schema.get_field(QUARTZDB_ROW_INDEX_FIELD_NAME)?;
         let labels_field = fts_schema.get_field(QUARTZDB_LABELS_FIELD_NAME)?;
-        for (index, proto_doc) in batch.documents.iter().enumerate() {
-            let labels_json_object = serde_json::from_str::<serde_json::Value>(&proto_doc.labels)?;
+        for (index, document) in batch.documents.iter().enumerate() {
             index_writer.add_document(tantivy::doc!(
                 row_index_field => index as u64,
-                labels_field => labels_json_object,
+                labels_field => document.labels,
             ))?;
-            for tag in &proto_doc.tags {
+            for tag in &document.tags {
                 bloom_filter.insert(tag);
             }
         }
@@ -145,8 +134,8 @@ impl SplitWriter {
 
     async fn write_data(
         &self,
-        batch: ProtoDocumentBatch,
         table_config: &TableConfig,
+        batch: StorerBatch,
     ) -> Result<()> {
         let data_schema = Schema::get_primary_schema(table_config);
         let capacity = batch.documents.len();
@@ -166,12 +155,12 @@ impl SplitWriter {
         }
 
         // group columnar values while building timestamp & source arrays
-        for proto_doc in batch.documents {
-            timestamps_builder.append_value(proto_doc.timestamp);
-            sources_builder.append_value(proto_doc.source);
+        for document in batch.documents {
+            timestamps_builder.append_value(document.timestamp);
+            sources_builder.append_value(document.source);
 
             // Put all remainign columns values toghether
-            for (dynamic_column_index, field_value) in proto_doc.values.into_iter().enumerate() {
+            for (dynamic_column_index, field_value) in document.values.into_iter().enumerate() {
                 dynamic_columns[dynamic_column_index].push(field_value);
             }
         }

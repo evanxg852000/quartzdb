@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use common::catalog::TableMeta;
-use common::proto::FetchEventsRequest;
+use common::catalog::{SplitMeta, TableMeta};
+use common::proto::{FetchEventsRequest, PutSplitRequest};
 use common::proto::grpc_metastore_service_client::GrpcMetastoreServiceClient;
 use common::proto::{
     DeleteTableRequest, GetTableRequest, ListTablesRequest, PutTableRequest
@@ -78,6 +78,14 @@ impl MetastoreService for GrpcClientMetastoreServiceImpl {
         let request = DeleteTableRequest{name: table_name.to_string()};
         let mut client = self.service_client.lock().await;
         client.delete_table(request).await?;
+        Ok(())
+    }
+
+     async fn put_split(&self, split_meta: SplitMeta) -> Result<()> {
+        let split = bitcode::serialize(&split_meta)?;
+        let request = PutSplitRequest{split};
+        let mut client = self.service_client.lock().await;
+        client.put_split(request).await?;
         Ok(())
     }
 }

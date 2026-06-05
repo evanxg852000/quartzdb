@@ -4,13 +4,13 @@ pub mod events;
 mod impls;
 mod web;
 pub mod service;
-use storage::Storage;
-
-use std::sync::Arc;
+use storage::configs::StorageConfig;
 
 use axum::Router;
 
 use common::proto::grpc_metastore_service_server::GrpcMetastoreServiceServer;
+
+const METASTORE_DIR: &str = "metastore";
 
 use crate::{
     client::MetastoreClient,
@@ -24,24 +24,16 @@ pub struct MetastoreServiceStartResult {
     pub metastore_grpc_service_opt: Option<GrpcMetastoreServiceServer<GrpcServerMetastoreServiceImpl>>,
 }
 
-
-// pub async fn setup_grpc_service(
-//     storage: Arc<dyn Storage>,
-//     config: MetastoreConfig,
-// ) -> anyhow::Result<GrpcMetastoreServiceServer<GrpcServerMetastoreServiceImpl>> {
-//     let fs_metastore = MetastoreFactory::build(storage, &config).await?;
-//     let grpc_server_impl = GrpcServerMetastoreServiceImpl::new(fs_metastore);
-//     Ok(GrpcMetastoreServiceServer::new(grpc_server_impl))
-// }
-
 pub async fn start_metastore_service(
-    config: &MetastoreConfig,
-    storage: Arc<dyn Storage>,
+    metastore_config: &MetastoreConfig,
+    storage_config: &StorageConfig,
+    // storage: Arc<dyn Storage>,
 ) -> anyhow::Result<MetastoreServiceStartResult> {
-    let base_metastore = MetastoreFactory::build(storage, &config).await?;
+    let storage = storage_config.derive(METASTORE_DIR, None).build().await?;
+    let base_metastore = MetastoreFactory::build(storage, &metastore_config).await?;
     let metastore_client = MetastoreClient::new(base_metastore.clone());
     let metastore_http_router = setup_http_routes(metastore_client.clone());
-    let metastore_grpc_service_opt = match &config.metastore_type {
+    let metastore_grpc_service_opt = match &metastore_config.metastore_type {
         MetastoreType::Remote { .. } => None,
         _ =>  {
             let grpc_server_impl = GrpcServerMetastoreServiceImpl::new(base_metastore.clone());

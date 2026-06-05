@@ -4,10 +4,10 @@ use anyhow::Result;
 
 use common::catalog::TableMeta;
 use datafusion::arrow::array::RecordBatch;
-use metastore::client::MetastoreClient;
+use metastore::{service::MetastoreService, client::MetastoreClient};
 use storage::Storage;
 
-use crate::split::writter::SplitWriter;
+use crate::{document::StorerBatch, split::writter::SplitWriter};
 
 #[derive(Debug, Clone)]
 pub struct StorerContext {
@@ -22,15 +22,15 @@ impl StorerContext {
         storage: Arc<dyn Storage>,
         metastore_client: MetastoreClient,
     ) -> Result<Self> {
-        let mut index_storage = storage;
+        let mut table_storage = storage;
         if let Some(index_storage_settings) = &table_meta.settings.storage {
-            index_storage = index_storage
+            table_storage = table_storage
                 .derive_remote(&index_storage_settings.url)
                 .await?;
         }
         Ok(Self {
             table_meta,
-            storage: index_storage,
+            storage: table_storage,
             metastore_client,
         })
     }
@@ -63,15 +63,18 @@ impl TableProcessor {
         let storage = context.storage.clone();
         let table_name = context.table_meta.name.clone();
         let table_config = &context.table_meta.config;
-            
+        
+        // build sorted batch
+        let mut storer_batch = StorerBatch::try_from_record_batch(table_config, batch)?;
+        storer_batch.sort();
+
         // build split & upload it
         let mut split_writer = SplitWriter::try_new(table_name, storage.clone()).await?;
-        split_writer.write(batch, table_config).await?;
+        split_writer.write(table_config, storer_batch).await?;
         let split_meta = split_writer.finalize().await?;
 
         // publish it
-        _ = split_meta;
-        //TODO: context.metastore_client.put_split(split_meta).await?;
+        context.metastore_client.put_split(split_meta).await?;
         Ok(())
     }
 }

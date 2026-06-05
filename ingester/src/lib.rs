@@ -12,7 +12,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use axum::Router;
 use metastore::client::MetastoreClient;
-use storage::Storage;
+use storage::{Storage, configs::StorageConfig};
 use storer::client::StorerClient;
 
 use crate::{configs::IngesterConfig, service::IngesterService, web::setup_http_routes};
@@ -24,8 +24,8 @@ pub struct IngesterServiceStartResult {
 }
 
 pub async fn start_ingester_service(
-    config: &IngesterConfig, 
-    storage: Arc<dyn Storage>, 
+    ingester_config: &IngesterConfig, 
+    storage_config: &StorageConfig, 
     metastore_client: MetastoreClient,
     storer_client: Option<StorerClient>,
 ) -> Result<IngesterServiceStartResult> {
@@ -35,8 +35,8 @@ pub async fn start_ingester_service(
         .ok_or_else(|| anyhow::anyhow!("TODO:"))?;
 
     let mut ingester_service = IngesterService::try_new(
-        config.clone(),
-        storage,
+        ingester_config,
+        storage_config,
         metastore_client.clone(),
         storer_client.clone()
     ).await?;

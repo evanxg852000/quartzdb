@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use metastore::{client::MetastoreClient, events::{MetastoreEvent, MetastoreEventType, MetastoreEventsFetcher}, service::MetastoreService};
-use storage::Storage;
+use metastore::{client::MetastoreClient, events::{MetastoreEvent, MetastoreEventType, MetastoreEventsFetcher}};
+use storage::{Storage, configs::StorageConfig};
 use storer::{client::StorerClient};
 use tokio::task::JoinHandle;
 
-use crate::{client::IngesterClient, commands::{IngesterCommand, IngesterMailbox}, configs::IngesterConfig, table_processor::{IngesterContext, TableProcessor}, table_processor_registry::TableProcessorRegistry};
+use crate::{client::IngesterClient, commands::{IngesterCommand, IngesterMailbox}, configs::IngesterConfig, table_processor::ProcessingReport, table_processor_registry::TableProcessorRegistry};
+
+const INGESTER_DIR: &str = "ingester";
 
 pub struct IngesterService {
     config: IngesterConfig,
@@ -24,15 +26,16 @@ pub struct IngesterService {
 
 impl IngesterService {
     pub async fn try_new(
-        config: IngesterConfig,
-        storage: Arc<dyn Storage>,
+        ingester_config: &IngesterConfig,
+        storage_config: &StorageConfig,
         metastore_client: MetastoreClient,
         storer_client: StorerClient,
     ) -> Result<Self> {
+        let storage = storage_config.derive(INGESTER_DIR, None).build().await?;
         let table_processor_registry = Arc::new(TableProcessorRegistry::try_new(500, storage.clone(), storer_client.clone(), metastore_client.clone()).await?);
         let metastore_events_fetcher = MetastoreEventsFetcher::new(metastore_client.clone());
         Ok(IngesterService {
-            config,
+            config: ingester_config.clone(),
             storage,
             metastore_client,
             storer_client,
@@ -94,8 +97,15 @@ async fn handle_other_commands(
             policy,
             reply_sender,
         } => {
-            let processor = table_processor_registry.get_processor(&table_name).await?;
-            let report = processor.process_batch(batch, policy).await?;
+            let response: Result<ProcessingReport, anyhow::Error> = async {
+                let processor = table_processor_registry.get_processor(&table_name).await?;
+                let report = processor.process_batch(batch, policy).await?;
+                Ok(report)
+            }.await;
+            let report = match response {
+                Ok(report) => report,
+                Err(err) => ProcessingReport::from_error(&err),
+            };
             reply_sender
                 .send(report)
                 .map_err(|_| anyhow::anyhow!("Failed to send reply"))?;

@@ -1,6 +1,7 @@
 use std::{fmt::Debug, sync::Arc};
 
 use anyhow::Result;
+use common::catalog::SplitMeta;
 use crate::{events::MetastoreEvent, service::MetastoreService};
 
 #[derive(Clone)]
@@ -41,6 +42,10 @@ impl MetastoreService for MetastoreClient {
 
     async fn delete_table(&self, table_name: &str) -> Result<()> {
         self.inner.delete_table(table_name).await
+    }
+
+    async fn put_split(&self, split_meta: SplitMeta) -> Result<()> {
+        self.inner.put_split(split_meta).await
     }
 }
 
