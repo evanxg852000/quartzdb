@@ -1,0 +1,36 @@
+[package]
+name = "storer"
+description = "storer for quartzdb"
+
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+datafusion.workspace = true
+datafusion-distributed.workspace = true
+arrow-flight.workspace = true
+axum.workspace = true
+serde.workspace = true
+futures.workspace = true
+async-trait.workspace = true
+hashbrown.workspace = true
+tempfile.workspace = true
+fastbloom.workspace = true
+tantivy.workspace = true
+serde_json.workspace = true
+bitcode.workspace = true
+uuid.workspace = true
+iceberg.workspace = true
+
+common.workspace = true
+metastore.workspace = true
+storage.workspace = true
+

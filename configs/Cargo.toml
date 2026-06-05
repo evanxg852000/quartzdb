@@ -1,0 +1,25 @@
+[package]
+name = "configs"
+description = "configs for quartzdb"
+
+version.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+tokio.workspace = true
+tonic.workspace = true
+datafusion.workspace = true
+datafusion-distributed.workspace = true
+arrow-flight.workspace = true
+serde.workspace = true
+
+storage.workspace = true
+metastore.workspace = true
+storer.workspace = true
+ingester.workspace = true

@@ -1,9 +1,0 @@
-
-data_dir: "./qtzdb_data"
-
-metastore:
-  type: local
-  # type: postgres
-  # connection_string: "postgresql://user:password@localhost:5432/quartzdb
-  # type: local
-  # directory: "./data/metastore"
