@@ -2,7 +2,7 @@ use std::{sync::Arc, vec};
 
 use anyhow::Result;
 
-use common::{convert::{record_batch_from_bytes, record_batch_to_json}, proto::SearchResponse};
+use common::convert::record_batch_to_json;
 use datafusion::arrow::array::RecordBatch;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -28,7 +28,7 @@ impl SearchResult {
 }
 
 impl TryFrom<RecordBatch> for SearchResult {
-    type Error = String;
+    type Error = anyhow::Error;
 
     fn try_from(record_batch: RecordBatch) -> Result<Self, Self::Error> {
         let data = record_batch_to_json(record_batch)?;

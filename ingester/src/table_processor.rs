@@ -1,4 +1,4 @@
-use std::{error::Error, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::Result;
 // use datafusion::{arrow::{array::{RecordBatch, StringBuilder}, datatypes::Field}, parquet::data_type::DataType};
@@ -12,12 +12,11 @@ use storage::Storage;
 
 use crate::document::{IngestBatch, IngestDocument};
 use common::{
-    catalog::{TableConfig, TableMeta},
-    schema::Schema,
+    catalog::{TableConfig, TableMeta}, schema::Schema
 };
 use storer::{
     client::StorerClient,
-    service::{StorerPutRequest, StorerPutRequestInfo, StorerService},
+    service::StorerService,
 };
 
 const SOURCE_COLUMN_NAME: &'static str = "_source";
@@ -126,7 +125,7 @@ impl TableProcessor {
         batch: IngestBatch,
         policy: BatchProcessorPolicy,
     ) -> Result<ProcessingReport> {
-        let (storer_put_request, report) = process_batch(&self.context, batch, policy)?;
+        let (table_name, record_batch, report) = process_batch(&self.context, batch, policy)?;
         if !report.accepted {
             return Ok(report);
         }
@@ -134,7 +133,7 @@ impl TableProcessor {
         //TODO: store batch in WAL & reply to client before
         // putting to storer. spawn task to put to storer with support for retrying on failure.
         // once storer put succeeds, truncate the wall
-        self.context.storer_client.put(storer_put_request).await?;
+        self.context.storer_client.put(&table_name, record_batch).await?;
         Ok(report)
     }
 }
@@ -143,7 +142,7 @@ fn process_batch(
     context: &IngesterContext,
     batch: IngestBatch,
     policy: BatchProcessorPolicy,
-) -> Result<(StorerPutRequest, ProcessingReport)> {
+) -> Result<(String, RecordBatch, ProcessingReport)> {
     let mut report = ProcessingReport::new(batch.len());
     let mut document_source_array_builder = StringBuilder::new();
     for document in batch.0 {
@@ -166,14 +165,12 @@ fn process_batch(
         vec![Arc::new(document_source_array_builder.finish())],
     )?;
 
-    let storer_put_request = StorerPutRequest {
-        info: StorerPutRequestInfo {
-            table_name: context.table_meta.name.clone(),
-        },
-        data: record_batch,
-    };
+    // let storer_put_request = PutRequest {
+    //     table_name: context.table_meta.name.clone(),
+    //     record_batch: record_batch_to_bytes(record_batch)?,
+    // };
 
-    Ok((storer_put_request, report))
+    Ok((context.table_meta.name.clone(), record_batch, report))
 }
 
 fn validate_document(

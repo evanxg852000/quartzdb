@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use arrow_flight::flight_service_server::FlightServiceServer;
+use common::proto::grpc_storer_service_server::GrpcStorerServiceServer;
 use datafusion_distributed::{Worker, WorkerServiceServer};
 use metastore::client::MetastoreClient;
 use storage::configs::StorageConfig;
@@ -24,8 +25,8 @@ const STORER_DIR: &str = "storer";
 
 pub struct StorerServiceStartResult {
     pub storer_client: StorerClient,
-    pub storer_store_grpc_service: FlightServiceServer<GrpcServerStorerServiceImpl>,
-    pub storer_search_grpc_service: WorkerServiceServer<Worker>,
+    pub storer_grpc_service: GrpcStorerServiceServer<GrpcServerStorerServiceImpl>,
+    pub storer_search_worker_grpc_service: WorkerServiceServer<Worker>,
 }
 
 pub async fn start_storer_service(
@@ -41,15 +42,15 @@ pub async fn start_storer_service(
         Arc::new(TableProcessorRegistry::try_new(500, storage, metastore_client).await?);
     let base_storer = StorerFactory::build(&storer_config, table_processor_registry).await?;
     let grpc_server_impl = GrpcServerStorerServiceImpl::new(base_storer.clone());
-    let storer_store_grpc_service = FlightServiceServer::new(grpc_server_impl);
+    let storer_grpc_service = GrpcStorerServiceServer::new(grpc_server_impl);
     let storer_client = StorerClient::new(base_storer.clone());
 
     let search_worker = SearchWorkerBuilder::build();
-    let storer_search_grpc_service = search_worker.into_worker_server();
+    let storer_search_worker_grpc_service = search_worker.into_worker_server();
 
     Ok(StorerServiceStartResult {
         storer_client,
-        storer_store_grpc_service,
-        storer_search_grpc_service,
+        storer_grpc_service,
+        storer_search_worker_grpc_service,
     })
 }

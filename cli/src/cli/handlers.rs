@@ -59,16 +59,16 @@ pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
             println!("Starting storer service...");
             let StorerServiceStartResult {
                 storer_client,
-                storer_store_grpc_service,
-                storer_search_grpc_service,
+                storer_grpc_service,
+                storer_search_worker_grpc_service,
             } = storer::start_storer_service(
                 &config.storer,
                 &config.storage,
                 metastore_client.clone(),
             )
             .await?;
-            grpc_router_builder.add_service(storer_store_grpc_service);
-            grpc_router_builder.add_service(storer_search_grpc_service);
+            grpc_router_builder.add_service(storer_grpc_service);
+            grpc_router_builder.add_service(storer_search_worker_grpc_service);
             Some(storer_client)
         }
         false => None,
