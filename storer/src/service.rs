@@ -1,8 +1,6 @@
-
 use anyhow::Result;
 use async_trait::async_trait;
 use datafusion::arrow::array::RecordBatch;
-
 
 #[derive(Debug)]
 pub struct StorerPutRequestInfo {
@@ -17,11 +15,18 @@ pub struct StorerPutRequest {
 
 #[derive(Debug)]
 pub struct StorerQueryRequest {
+    pub table_name: String,
     pub query: String,
+}
+
+#[derive(Debug, Default)]
+pub struct StorerQueryResponse {
+    pub count: u64,
+    pub rows: Vec<String>,
 }
 
 #[async_trait]
 pub trait StorerService: Send + Sync + 'static {
     async fn put(&self, request: StorerPutRequest) -> Result<()>;
-    async fn query(&self, query: StorerQueryRequest) -> Result<()>;
+    async fn query(&self, query: StorerQueryRequest) -> Result<StorerQueryResponse>;
 }

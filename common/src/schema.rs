@@ -14,8 +14,7 @@ pub const QUARTZDB_LABELS_FIELD_NAME: &'static str = "__qtz_labels";
 pub const QUARTZDB_TIMESTAMP_FIELD_NAME: &'static str = "__qtz_timestamp";
 pub const QUARTZDB_SOURCE_FIELD_NAME: &'static str = "__qtz_source";
 
-//TODO: Future
-// add support for lance format
+// TODO: add support for lance format
 // https://docs.rs/lance/latest/lance/
 
 pub struct Schema {}

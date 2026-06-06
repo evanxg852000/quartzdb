@@ -93,9 +93,7 @@ pub async fn run_cli() -> anyhow::Result<()> {
         }
         Some(Commands::Table { action }) => match action {
             TableSubcommands::List => handlers::handle_table_list(config).await?,
-            TableSubcommands::Put { file } => {
-                handlers::handle_table_put(config, file).await?
-            }
+            TableSubcommands::Put { file } => handlers::handle_table_put(config, file).await?,
             TableSubcommands::Delete { name } => {
                 handlers::handle_table_delete(config, &name).await?
             }

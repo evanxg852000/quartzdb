@@ -6,8 +6,7 @@ use tokio::sync::Mutex;
 
 use crate::catalog::TableMeta;
 
-
-pub trait Processor : Debug {}
+pub trait Processor: Debug {}
 
 #[derive(Debug)]
 pub struct ProcessorWrapper<T: Processor> {
@@ -35,10 +34,7 @@ impl<T: Processor> ProcessorRegistry<T> {
         }
     }
 
-    pub async fn set_initial_processors(
-        &self,
-        processors: Vec<ProcessorWrapper<T>>,
-    ) {
+    pub async fn set_initial_processors(&self, processors: Vec<ProcessorWrapper<T>>) {
         let mut entries = self.entries.lock().await;
         for processor in processors {
             entries.insert(processor.table.name.clone(), processor);
@@ -58,6 +54,8 @@ impl<T: Processor> ProcessorRegistry<T> {
 
     pub async fn get_processor(&self, name: &str) -> Option<Arc<T>> {
         let mut entries = self.entries.lock().await;
-        entries.get_mut(name).map(|wrapper| wrapper.processor.clone())
+        entries
+            .get_mut(name)
+            .map(|wrapper| wrapper.processor.clone())
     }
 }

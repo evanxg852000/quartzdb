@@ -5,7 +5,10 @@ use storage::Storage;
 
 use crate::{
     config::{MetastoreConfig, MetastoreType},
-    impls::{file_system::FileSystemMetastoreServiceImpl, grpc_client::GrpcClientMetastoreServiceImpl}, service::MetastoreService,
+    impls::{
+        file_system::FileSystemMetastoreServiceImpl, grpc_client::GrpcClientMetastoreServiceImpl,
+    },
+    service::MetastoreService,
 };
 
 pub struct MetastoreFactory;
@@ -21,8 +24,8 @@ impl MetastoreFactory {
                 Arc::new(FileSystemMetastoreServiceImpl::try_new(&data_dir).await?)
             }
             MetastoreType::Remote { uri } => {
-               Arc::new(GrpcClientMetastoreServiceImpl::try_new(uri.to_string()).await?)
-            },
+                Arc::new(GrpcClientMetastoreServiceImpl::try_new(uri.to_string()).await?)
+            }
             // TODO: implement other types
             _ => unimplemented!("Metastore type not implemented yet"),
         };

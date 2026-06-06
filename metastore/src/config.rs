@@ -8,9 +8,13 @@ pub enum MetastoreType {
     #[serde(rename = "fs")]
     FileSystem,
     Sqlite,
-    Postgres { uri: Url },
+    Postgres {
+        uri: Url,
+    },
     // Acts as a client & doesn't spawn a grpc server
-    Remote{ uri: Url } 
+    Remote {
+        uri: Url,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

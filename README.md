@@ -24,5 +24,5 @@ cargo run -- ingest --name github_events --file ./tests/data/
 # delete index
 cargo run -- table delete --name github_events
 
-cargo run -- query --name foo --query "select * from foo"
+cargo run -- query --name logs --query "select * from foo"
 ```

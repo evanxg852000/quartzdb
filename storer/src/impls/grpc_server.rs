@@ -8,11 +8,11 @@ use arrow_flight::{
 };
 use axum::body::Bytes;
 use datafusion::arrow::datatypes::Schema;
-use futures::{stream::BoxStream, StreamExt};
+use futures::{StreamExt, stream::BoxStream};
 use tonic::{Request, Response, Status, Streaming};
 
-use crate::service::{StorerPutRequest, StorerPutRequestInfo};
 use crate::service::StorerService;
+use crate::service::{StorerPutRequest, StorerPutRequestInfo};
 
 #[derive(Clone)]
 pub struct GrpcServerStorerServiceImpl {
@@ -55,13 +55,15 @@ impl FlightService for GrpcServerStorerServiceImpl {
         }
 
         // 2. Extract the schema from the first message metadata
-        let schema = Schema::try_from(&first_msg)
-            .map_err(|e| Status::invalid_argument(e.to_string()))?;
+        let schema =
+            Schema::try_from(&first_msg).map_err(|e| Status::invalid_argument(e.to_string()))?;
         let schema_ref = std::sync::Arc::new(schema);
 
         // 3. Chain the first message's data payload with the rest of the stream
-        let remaining_stream = futures::stream::once(async { Ok(first_msg) })
-            .chain(inner_stream.map(|r| r.map_err(|e| arrow_flight::error::FlightError::Tonic(Box::new(e)))));
+        let remaining_stream = futures::stream::once(async { Ok(first_msg) }).chain(
+            inner_stream
+                .map(|r| r.map_err(|e| arrow_flight::error::FlightError::Tonic(Box::new(e)))),
+        );
 
         // 4. Use FlightRecordBatchStream to automatically parse raw bytes into RecordBatches
         let mut batch_stream = FlightRecordBatchStream::new_from_flight_data(remaining_stream);
@@ -69,17 +71,19 @@ impl FlightService for GrpcServerStorerServiceImpl {
         while let Some(batch_result) = batch_stream.next().await {
             let record_batch = batch_result.map_err(|e| Status::internal(e.to_string()))?;
             println!("Received batch with {} rows", record_batch.num_rows());
-            
+
             // TODO: Persist or process your record_batch here
-            self.inner.put(StorerPutRequest {
-                info: StorerPutRequestInfo {
-                    table_name: "foo".into(),
-                },
-                data: record_batch,
-            }).await.unwrap();
+            self.inner
+                .put(StorerPutRequest {
+                    info: StorerPutRequestInfo {
+                        table_name: "foo".into(),
+                    },
+                    data: record_batch,
+                })
+                .await
+                .unwrap();
         }
 
-        
         // 5. Respond back to the client acknowledging success
         // let output_stream = futures::stream::empty();
         let response_payload = PutResult {
@@ -153,4 +157,3 @@ impl FlightService for GrpcServerStorerServiceImpl {
         Err(Status::unimplemented("Implement do_exchange"))
     }
 }
-

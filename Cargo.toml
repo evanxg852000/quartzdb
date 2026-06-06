@@ -9,8 +9,7 @@ members = [
     "metastore",
     "ingester",
     "storer",
-    # "searcher",
-    
+    "searcher",
 ]
 
 exclude = ["df-example"]
@@ -88,6 +87,7 @@ configs = { path = "configs" }
 metastore = { path = "metastore" }
 storer = { path = "storer" }
 ingester = { path = "ingester" }
+searcher = { path = "searcher" }
 
 
 # quartz-insert = { path = "quartz-insert" }

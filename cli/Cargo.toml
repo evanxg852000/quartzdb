@@ -51,6 +51,7 @@ storage = { workspace = true }
 metastore = { workspace = true }
 storer = { workspace = true }
 ingester = { workspace = true }
+searcher = { workspace = true }
 
 
 [build-dependencies]

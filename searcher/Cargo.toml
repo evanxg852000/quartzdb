@@ -1,6 +1,6 @@
 [package]
-name = "configs"
-description = "configs for quartzdb"
+name = "searcher"
+description = "searcher for quartzdb"
 
 version.workspace = true
 edition.workspace = true
@@ -17,10 +17,17 @@ tonic.workspace = true
 datafusion.workspace = true
 datafusion-distributed.workspace = true
 arrow-flight.workspace = true
+axum.workspace = true
 serde.workspace = true
+futures.workspace = true
+async-trait.workspace = true
+tokio-util.workspace = true
+futures-util.workspace = true
+serde_json.workspace = true
+hashbrown.workspace = true
 
+common.workspace = true
 storage.workspace = true
 metastore.workspace = true
 storer.workspace = true
-ingester.workspace = true
-searcher.workspace = true
+

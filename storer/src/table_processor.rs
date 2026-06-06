@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use common::catalog::TableMeta;
 use datafusion::arrow::array::RecordBatch;
-use metastore::{service::MetastoreService, client::MetastoreClient};
+use metastore::{client::MetastoreClient, service::MetastoreService};
 use storage::Storage;
 
 use crate::{document::StorerBatch, split::writter::SplitWriter};
@@ -54,16 +54,13 @@ impl TableProcessor {
         &self.context
     }
 
-    pub async fn process_batch(
-        &self,
-        batch: RecordBatch, 
-    ) -> Result<()> {
+    pub async fn process_batch(&self, batch: RecordBatch) -> Result<()> {
         let context = self.context.clone();
 
         let storage = context.storage.clone();
         let table_name = context.table_meta.name.clone();
         let table_config = &context.table_meta.config;
-        
+
         // build sorted batch
         let mut storer_batch = StorerBatch::try_from_record_batch(table_config, batch)?;
         storer_batch.sort();

@@ -18,7 +18,6 @@ use tokio::{fs, sync::Mutex};
 
 use crate::{events::MetastoreEvent, service::MetastoreService};
 
-
 // const METASTORE_DIR: &str = "metastore";
 const TABLE_META_FILE: &str = "meta.json";
 
@@ -120,7 +119,6 @@ impl FileSystemMetastoreServiceImpl {
         }
         Ok(entries)
     }
-
 }
 
 #[tonic::async_trait]
@@ -129,8 +127,8 @@ impl MetastoreService for FileSystemMetastoreServiceImpl {
         //TODO:
         Ok(vec![])
     }
-    
-    async fn list_tables( &self) -> Result<Vec<TableMeta>> {
+
+    async fn list_tables(&self) -> Result<Vec<TableMeta>> {
         self.list_tables().await
     }
 

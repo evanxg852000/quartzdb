@@ -1,11 +1,9 @@
 use std::{fmt::Debug, sync::Arc};
 
-
-use async_trait::async_trait;
 use anyhow::Result;
+use async_trait::async_trait;
 
-use crate::service::{StorerQueryRequest, StorerPutRequest, StorerService};
-
+use crate::service::{StorerPutRequest, StorerQueryRequest, StorerQueryResponse, StorerService};
 
 #[derive(Clone)]
 pub struct StorerClient {
@@ -14,8 +12,7 @@ pub struct StorerClient {
 
 impl Debug for StorerClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("StorerClient")
-            .finish_non_exhaustive()
+        f.debug_struct("StorerClient").finish_non_exhaustive()
     }
 }
 
@@ -31,8 +28,7 @@ impl StorerService for StorerClient {
         self.inner.put(request).await
     }
 
-    async fn query(&self, query: StorerQueryRequest) -> Result<()> {
+    async fn query(&self, query: StorerQueryRequest) -> Result<StorerQueryResponse> {
         self.inner.query(query).await
     }
 }
-

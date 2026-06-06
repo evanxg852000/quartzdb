@@ -1,7 +1,7 @@
+use anyhow::Result;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use anyhow::Result;
 use tokio::sync::Mutex;
 
 pub type AsyncBoxFuture<'a, O> = Pin<Box<dyn Future<Output = O> + Send + 'a>>;
@@ -17,17 +17,18 @@ pub struct ClientResolver<T: Clone> {
 }
 
 impl<T: Clone + Send + Sync + 'static> ClientResolver<T> {
-
     pub fn new_lazy<F>(closure: F) -> Self
     where
         F: Fn() -> AsyncBoxFuture<'static, Result<T>> + Send + Sync + 'static,
     {
         Self {
-            state: Arc::new(Mutex::new(ClientResolverInner::Defered(Some(Box::new(closure))))),
+            state: Arc::new(Mutex::new(ClientResolverInner::Defered(Some(Box::new(
+                closure,
+            ))))),
         }
     }
 
-     pub fn new_resolved(instance: T) -> Self {
+    pub fn new_resolved(instance: T) -> Self {
         Self {
             state: Arc::new(Mutex::new(ClientResolverInner::Resolved(instance))),
         }
@@ -38,14 +39,12 @@ impl<T: Clone + Send + Sync + 'static> ClientResolver<T> {
         match &mut *lock {
             ClientResolverInner::Resolved(instance) => Ok(instance.clone()),
             ClientResolverInner::Defered(resolve_fn_opt) => {
-                let resolve_fn = resolve_fn_opt
-                    .take()
-                    .expect("expeted resolver funtion");
+                let resolve_fn = resolve_fn_opt.take().expect("expeted resolver funtion");
                 match resolve_fn().await {
                     Ok(instance) => {
                         *lock = ClientResolverInner::Resolved(instance.clone());
                         Ok(instance)
-                    },
+                    }
                     Err(err) => {
                         *resolve_fn_opt = Some(resolve_fn);
                         Err(err)
@@ -54,5 +53,4 @@ impl<T: Clone + Send + Sync + 'static> ClientResolver<T> {
             }
         }
     }
-
 }

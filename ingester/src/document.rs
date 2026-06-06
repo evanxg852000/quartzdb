@@ -22,10 +22,7 @@ impl IngestBatch {
 
     pub fn add_document(&mut self, source: String) {
         let next = self.0.len() as u64 + 1;
-        self.0.push(IngestDocument {
-            line: next,
-            source,
-        });
+        self.0.push(IngestDocument { line: next, source });
     }
 
     pub fn len(&self) -> usize {

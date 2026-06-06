@@ -1,6 +1,10 @@
 use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Result;
+use common::{
+    catalog::{FieldType, FieldValue, SplitMeta, TableConfig},
+    schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema},
+};
 use datafusion::{
     arrow::array::{
         ArrayRef, BooleanArray, Float64Array, Int64Array, LargeStringBuilder, RecordBatch,
@@ -9,7 +13,6 @@ use datafusion::{
     parquet::{arrow::AsyncArrowWriter, basic::Compression, file::properties::WriterProperties},
 };
 use fastbloom::BloomFilter;
-use common::{catalog::{FieldType, FieldValue, SplitMeta, TableConfig}, schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema}};
 use storage::Storage;
 use tempfile::TempDir;
 
@@ -45,11 +48,7 @@ impl SplitWriter {
         })
     }
 
-    pub async fn write(
-        &mut self,
-        table_config: &TableConfig,
-        batch: StorerBatch,
-    ) -> Result<()> {
+    pub async fn write(&mut self, table_config: &TableConfig, batch: StorerBatch) -> Result<()> {
         self.min_timestamp = batch.min_timestamp();
         self.max_timestamp = batch.max_timestamp();
         self.write_index(&batch).await?;
@@ -73,7 +72,7 @@ impl SplitWriter {
         Ok(split_meta)
     }
 
-    async fn write_index(&self, batch: &StorerBatch) -> Result<()> {        
+    async fn write_index(&self, batch: &StorerBatch) -> Result<()> {
         // create tantivy index & bloom filter
         let fts_schema = Schema::get_fts_schema();
         let index = tantivy::Index::create_in_dir(&self.scratch_dir, fts_schema.clone())?;
@@ -118,7 +117,7 @@ impl SplitWriter {
         }
 
         // add bloom filter file as filter.bin
-        let bloom_fileter_data= bitcode::serialize(&bloom_filter)?;
+        let bloom_fileter_data = bitcode::serialize(&bloom_filter)?;
         file_packer.add("bloom.qtz", bloom_fileter_data).await?;
 
         // finalize index file packing
@@ -132,11 +131,7 @@ impl SplitWriter {
         Ok(())
     }
 
-    async fn write_data(
-        &self,
-        table_config: &TableConfig,
-        batch: StorerBatch,
-    ) -> Result<()> {
+    async fn write_data(&self, table_config: &TableConfig, batch: StorerBatch) -> Result<()> {
         let data_schema = Schema::get_primary_schema(table_config);
         let capacity = batch.documents.len();
         let mut timestamps_builder =
