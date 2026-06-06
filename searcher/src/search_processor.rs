@@ -2,16 +2,18 @@ use std::{sync::Arc, vec};
 
 use anyhow::Result;
 
+use common::{convert::{record_batch_from_bytes, record_batch_to_json}, proto::SearchResponse};
+use datafusion::arrow::array::RecordBatch;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use storer::{
     client::StorerClient,
-    service::{StorerQueryRequest, StorerQueryResponse, StorerService},
+    service::StorerService,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SearchResult {
-    pub count: u64,
-    pub rows: Vec<String>,
+    pub data: Vec<JsonValue>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 }
@@ -19,20 +21,18 @@ pub struct SearchResult {
 impl SearchResult {
     pub fn from_error<E: ToString>(error: &E) -> Self {
         SearchResult {
-            count: 0,
-            rows: vec![],
+            data: vec![],
             error: Some(error.to_string()),
         }
     }
 }
 
-impl From<StorerQueryResponse> for SearchResult {
-    fn from(value: StorerQueryResponse) -> Self {
-        SearchResult {
-            count: value.count,
-            rows: value.rows,
-            error: None,
-        }
+impl TryFrom<RecordBatch> for SearchResult {
+    type Error = String;
+
+    fn try_from(record_batch: RecordBatch) -> Result<Self, Self::Error> {
+        let data = record_batch_to_json(record_batch)?;
+        Ok(SearchResult {data, error: None})
     }
 }
 
@@ -57,13 +57,12 @@ impl SearchProcessor {
         Self { context }
     }
 
-    pub async fn query(&self, table_name: String, query: String) -> Result<SearchResult> {
-        let storer_query_request = StorerQueryRequest { table_name, query };
-        let response = self
+    pub async fn search(&self, table_name: String, query: String) -> Result<SearchResult> {
+        let record_batch = self
             .context
             .storer_client
-            .query(storer_query_request)
+            .search(&table_name, &query)
             .await?;
-        Ok(SearchResult::from(response))
+        Ok(SearchResult::try_from(record_batch)?)
     }
 }

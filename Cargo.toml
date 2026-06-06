@@ -62,7 +62,7 @@ object_store = { version = "0.13", features = ["fs", "aws", "gcp", "azure"] }
 bloomfilter = "3.0"
 datafusion = "53.1"
 arrow-flight = "58.3" 
-datafusion-distributed = "1.0.0"
+datafusion-distributed = { git="https://github.com/datafusion-contrib/datafusion-distributed", rev="864b1dd"}
 tantivy = "0.26"
 lance = "4.0"
 lance-datafusion = "4.0"
@@ -80,6 +80,9 @@ bytes = "1.11"
 fastbloom = { version = "0.17", features = ["serde"] }
 sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "sqlite"]}
 bitcode = { version = "0.6", features = ["serde"] }
+hrw-hash = "2.0"
+arrow-json = "58.3"
+
 
 common = { path = "common" }
 storage = { path = "storage" }

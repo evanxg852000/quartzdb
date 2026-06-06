@@ -26,6 +26,7 @@ sqlx.workspace = true
 tokio-stream.workspace = true
 bitcode.workspace = true
 url.workspace = true
+bytes.workspace = true
 
 common.workspace = true
 storage.workspace = true

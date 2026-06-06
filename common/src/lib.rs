@@ -6,3 +6,4 @@ pub mod models;
 pub mod processors;
 pub mod proto;
 pub mod schema;
+pub mod convert;

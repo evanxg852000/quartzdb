@@ -27,7 +27,7 @@ async fn handle_search(
     Json(search_request): Json<SearchRequest>,
 ) -> Result<ApiOk<SearchResult>, ApiError> {
     let result = state
-        .query(table_name, search_request.query)
+        .search(table_name, search_request.query)
         .await
         .map_err(|err| ApiResponse::error(StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     Ok(ApiResponse::ok("OK", Some(result)))

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use bytes::Bytes;
 use common::proto::{
     DeleteTableRequest, DeleteTableResponse, FetchEventsRequest, FetchEventsResponse,
     GetTableRequest, GetTableResponse, ListTablesRequest, ListTablesResponse, PutSplitRequest,
@@ -32,7 +33,7 @@ impl GrpcMetastoreService for GrpcServerMetastoreServiceImpl {
             .fetch_events(last_checkin)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        let events = bitcode::serialize(&events).map_err(|e| Status::internal(e.to_string()))?;
+        let events = Bytes::from(bitcode::serialize(&events).map_err(|e| Status::internal(e.to_string()))?);
         Ok(Response::new(FetchEventsResponse { events }))
     }
 
@@ -45,7 +46,7 @@ impl GrpcMetastoreService for GrpcServerMetastoreServiceImpl {
             .list_tables()
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        let tables = bitcode::serialize(&tables).map_err(|e| Status::internal(e.to_string()))?;
+        let tables = Bytes::from(bitcode::serialize(&tables).map_err(|e| Status::internal(e.to_string()))?);
         Ok(Response::new(ListTablesResponse { tables }))
     }
 
@@ -73,7 +74,7 @@ impl GrpcMetastoreService for GrpcServerMetastoreServiceImpl {
             .get_table(&table_name)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
-        let table = bitcode::serialize(&table_meta).map_err(|e| Status::internal(e.to_string()))?;
+        let table = Bytes::from(bitcode::serialize(&table_meta).map_err(|e| Status::internal(e.to_string()))?);
         Ok(Response::new(GetTableResponse { table }))
     }
 

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use bytes::Bytes;
 use common::catalog::{SplitMeta, TableMeta};
 use common::proto::grpc_metastore_service_client::GrpcMetastoreServiceClient;
 use common::proto::{DeleteTableRequest, GetTableRequest, ListTablesRequest, PutTableRequest};
@@ -52,7 +53,7 @@ impl MetastoreService for GrpcClientMetastoreServiceImpl {
     }
 
     async fn put_table(&self, table_meta: TableMeta) -> Result<()> {
-        let table = bitcode::serialize(&table_meta)?;
+        let table = Bytes::from(bitcode::serialize(&table_meta)?);
         let request = PutTableRequest { table };
         let mut client = self.service_client.lock().await;
         client.put_table(request).await?;
@@ -82,7 +83,7 @@ impl MetastoreService for GrpcClientMetastoreServiceImpl {
     }
 
     async fn put_split(&self, split_meta: SplitMeta) -> Result<()> {
-        let split = bitcode::serialize(&split_meta)?;
+        let split = Bytes::from(bitcode::serialize(&split_meta)?);
         let request = PutSplitRequest { split };
         let mut client = self.service_client.lock().await;
         client.put_split(request).await?;

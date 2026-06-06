@@ -108,7 +108,7 @@ async fn handle_search_command(
             reply_sender,
         } => {
             let response: Result<SearchResult, anyhow::Error> = async {
-                let response = search_processor.query(table_name, query).await?;
+                let response = search_processor.search(table_name, query).await?;
                 Ok(response)
             }
             .await;

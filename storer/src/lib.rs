@@ -4,6 +4,7 @@ mod document;
 pub mod impls;
 pub mod service;
 pub mod split;
+pub mod search;
 mod table_processor;
 mod table_processor_registry;
 
@@ -11,14 +12,12 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use arrow_flight::flight_service_server::FlightServiceServer;
+use datafusion_distributed::{Worker, WorkerServiceServer};
 use metastore::client::MetastoreClient;
 use storage::configs::StorageConfig;
 
 use crate::{
-    client::StorerClient,
-    configs::StorerConfig,
-    impls::{factory::StorerFactory, grpc_server::GrpcServerStorerServiceImpl},
-    table_processor_registry::TableProcessorRegistry,
+    client::StorerClient, configs::StorerConfig, impls::{factory::StorerFactory, grpc_server::GrpcServerStorerServiceImpl}, search::worker::SearchWorkerBuilder, table_processor_registry::TableProcessorRegistry
 };
 
 const STORER_DIR: &str = "storer";
@@ -26,9 +25,7 @@ const STORER_DIR: &str = "storer";
 pub struct StorerServiceStartResult {
     pub storer_client: StorerClient,
     pub storer_store_grpc_service: FlightServiceServer<GrpcServerStorerServiceImpl>,
-    // use datafusion-distribute
-    // pub storer_query_grpc_service: Option<FlightServiceServer<QueryService>>,
-    // let storer_query_grpc_service = Some(FlightServiceServer::new(/* QueryService implementation */));
+    pub storer_search_grpc_service: WorkerServiceServer<Worker>,
 }
 
 pub async fn start_storer_service(
@@ -47,8 +44,12 @@ pub async fn start_storer_service(
     let storer_store_grpc_service = FlightServiceServer::new(grpc_server_impl);
     let storer_client = StorerClient::new(base_storer.clone());
 
+    let search_worker = SearchWorkerBuilder::build();
+    let storer_search_grpc_service = search_worker.into_worker_server();
+
     Ok(StorerServiceStartResult {
         storer_client,
         storer_store_grpc_service,
+        storer_search_grpc_service,
     })
 }

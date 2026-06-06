@@ -16,7 +16,7 @@ impl SearcherClient {
         SearcherClient { mailbox }
     }
 
-    pub async fn query(&self, table_name: String, query: String) -> Result<SearchResult> {
+    pub async fn search(&self, table_name: String, query: String) -> Result<SearchResult> {
         let (tx, rx) = oneshot::channel();
         let request = SearcherCommand::Search {
             table_name,

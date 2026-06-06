@@ -6,8 +6,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=protobuf/");
     let mut config = prost_build::Config::new();
     config.protoc_arg("--experimental_allow_proto3_optional");
+    config.bytes(&["."]); 
 
-    let input_files = ["protobuf/quartzdb.proto", "protobuf/metastore.proto"];
+    let input_files = [
+        "protobuf/quartzdb.proto",
+        "protobuf/metastore.proto",
+        "protobuf/storer.proto",
+    ];
     let output_dir = PathBuf::from("src/protobuf");
 
     tonic_prost_build::configure()
