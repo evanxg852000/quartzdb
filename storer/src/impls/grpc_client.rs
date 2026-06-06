@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use arrow_flight::FlightDescriptor;
 use arrow_flight::encode::FlightDataEncoderBuilder;
+use common::convert::{record_batch_from_bytes, record_batch_to_bytes};
 use common::proto::{PutRequest, SearchRequest};
 use common::proto::grpc_storer_service_client::GrpcStorerServiceClient;
 use datafusion::arrow::array::RecordBatch;
@@ -11,7 +12,6 @@ use tokio::sync::Mutex;
 use tonic::transport::Channel;
 
 use crate::service::StorerService;
-use crate::utils::{record_batch_from_bytes, record_batch_to_bytes};
 
 
 pub struct GrpcClientStorerServiceImpl {

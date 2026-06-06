@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
+use common::convert::{record_batch_from_bytes, record_batch_to_bytes};
 use common::proto::{PutRequest, PutResponse, SearchRequest, SearchResponse};
 use common::proto::grpc_storer_service_server::GrpcStorerService;
 use tonic::{Request, Response, Status};
 
 use crate::service::StorerService;
-use crate::utils::{record_batch_from_bytes, record_batch_to_bytes};
 
 #[derive(Clone)]
 pub struct GrpcServerStorerServiceImpl {
