@@ -218,7 +218,7 @@ pub async fn handle_ingest(
     Ok(())
 }
 
-pub async fn handle_query(
+pub async fn handle_search(
     config: QuartzConfig,
     table_name: &str,
     query: &str,
@@ -238,8 +238,16 @@ pub async fn handle_query(
         .await?;
     match response.status().is_success() {
         true => {
-            let api_response = response.json::<ApiOk<serde_json::Value>>().await?;
-            println!("OK: \n{}", api_response.data.unwrap().to_string());
+            println!("{:?}", response.text().await);
+
+            // let api_response = response.json::<ApiOk<serde_json::Value>>().await?;
+            // let value = api_response.data.unwrap();
+            
+            // let data = value.as_object()
+            //     .unwrap()
+            //     .get("data")
+            //     .unwrap();
+            // println!("{}", data.to_string());
         }
         false => {
             let api_error = response.json::<ApiError>().await?;

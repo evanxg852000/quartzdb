@@ -9,20 +9,21 @@ An experimental time series database for learning
 # start server
 cargo run -- run
 
-# create index
+# create table
 cargo run -- table put --file ./configs/schema/table-config.yaml
 
-# update index
+# update table
 cargo run -- index update --file ./configs/index-config.yaml
 
-# list indexes
+# list tables
 cargo run -- table list
 
 # insert data
 cargo run -- ingest --name github_events --file ./tests/data/
 
-# delete index
+# delete table
 cargo run -- table delete --name github_events
 
-cargo run -- query --name logs --query "select * from foo"
+# query table (with sql)
+cargo run -- search --name logs --query "select * from qtz_search(logs, 'foo:*ali') as t limit 5"
 ```

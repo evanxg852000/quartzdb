@@ -1,9 +1,10 @@
 use std::path::Path;
 
+use anyhow::Result;
 use serde::de::DeserializeOwned;
 use tokio::fs;
 
-pub async fn read_as_object<T: DeserializeOwned>(file_path: &Path) -> anyhow::Result<T> {
+pub async fn read_as_object<T: DeserializeOwned>(file_path: &Path) -> Result<T> {
     let file_extension = file_path
         .extension()
         .map(|os_str| os_str.to_string_lossy().into_owned())
@@ -16,3 +17,4 @@ pub async fn read_as_object<T: DeserializeOwned>(file_path: &Path) -> anyhow::Re
         _ => Err(anyhow::anyhow!("Supported file formats are: `json, yamal`")),
     }
 }
+

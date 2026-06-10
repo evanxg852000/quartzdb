@@ -18,7 +18,6 @@ use tokio::{fs, sync::Mutex};
 
 use crate::{events::MetastoreEvent, service::MetastoreService};
 
-// const METASTORE_DIR: &str = "metastore";
 const TABLE_META_FILE: &str = "meta.json";
 
 #[derive(Debug, Clone, PartialEq, serde::Deserialize, serde::Serialize)]
@@ -35,8 +34,6 @@ pub struct FileSystemMetastoreServiceImpl {
 
 impl FileSystemMetastoreServiceImpl {
     pub async fn try_new(directory: &PathBuf) -> Result<Self> {
-        // let directory = data_dir.join(METASTORE_DIR);
-        // tokio::fs::create_dir_all(&directory).await?;
         let entries = Self::load_tables_from_file_system(&directory).await?;
         Ok(FileSystemMetastoreServiceImpl {
             directory: directory.clone(),

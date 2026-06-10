@@ -3,17 +3,23 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use common::catalog::TableMeta;
-use datafusion::arrow::array::RecordBatch;
+use datafusion::arrow::{array::RecordBatch, compute::concat_batches, util::pretty::print_batches};
+use datafusion_distributed::display_plan_ascii;
 use metastore::{client::MetastoreClient, service::MetastoreService};
 use storage::Storage;
+use futures::TryStreamExt;
 
-use crate::{document::StorerBatch, split::writter::SplitWriter};
+use crate::{document::StorerBatch, search::{coordinator::SearchCoordinator, worker_manager::{SearchWorkerManager, SearchWorkerResolver}}, split::writter::SplitWriter};
+
+// The number of workers cooperating to execute a query
+const NUM_QUERY_EXECUTOR: usize = 3;
 
 #[derive(Debug, Clone)]
 pub struct StorerContext {
     table_meta: Arc<TableMeta>,
     storage: Arc<dyn Storage>,
     metastore_client: MetastoreClient,
+    worker_manager: Arc<SearchWorkerManager>,
 }
 
 impl StorerContext {
@@ -28,10 +34,12 @@ impl StorerContext {
                 .derive_remote(&index_storage_settings.url)
                 .await?;
         }
+        let worker_manager = Arc::new(SearchWorkerManager::try_new(metastore_client.clone())?);
         Ok(Self {
             table_meta,
             storage: table_storage,
             metastore_client,
+            worker_manager,
         })
     }
 
@@ -56,7 +64,6 @@ impl TableProcessor {
 
     pub async fn put(&self, record_batch: RecordBatch) -> Result<()> {
         let context = self.context.clone();
-
         let storage = context.storage.clone();
         let table_name = context.table_meta.name.clone();
         let table_config = &context.table_meta.config;
@@ -75,55 +82,66 @@ impl TableProcessor {
         Ok(())
     }
 
+    /// Steps:
+    /// 1. indentify splits with (timestamp & tags) prunning if possible
+    /// 2. fetch available nodes
+    /// 3. rendez-vous hash nodes with split to indentify worker nodes
+    /// 4. create a resolver based on the indentified worker nodes 
+    /// 5. Create distributed execution session context
+    /// 6. Execute the query
     pub async fn search(&self, query: &str) -> Result<RecordBatch> {
-        // TODO:
-        // // 1. Create your standard session context
-        // let ctx = SessionContext::new();
-    
-        // // 2. Turn on distributed capabilities and pass your custom table router
-        // let distributed_ctx = ctx
-        //     .with_distributed_capabilities()?
-        //     .with_worker_resolver(resolver);
+        let table_name = self.context.table_meta.name.clone();
+        let worker_resolver = SearchWorkerResolver::try_for_table(
+            table_name.clone(),
+            NUM_QUERY_EXECUTOR, // can be a param
+            self.context.worker_manager.clone(),
+        ).await?;
 
-        // // 3. Execute the query. 
-        // // This automatically runs your WorkerResolver, splits the plan, 
-        // // sends fragments to workers, and gathers the final results.
-        // let df = distributed_ctx.sql(sql).await?;
-        // let results = df.collect().await?;
+        //TODO: fetch matching splits using metastore_client
+        let split_ids: Vec<String> = vec![
+            "019e97de-ca9a-79b1-8675-f9aeee6d4364".into(),
+            "019e97f7-8459-7fa3-bc13-aff547844078".into(),
+        ];
+
+        let schema = common::schema::Schema::get_primary_schema(&self.context.table_meta.config);
+        let execution_context = SearchCoordinator::create_distributed_execution_context(
+            schema.clone(),
+            split_ids,
+            self.context.storage.clone(),
+            worker_resolver,
+        )?;
+
+        // debug logical-plan
+        // {
+        //     println!("LOGICAL PLAN");
+        //     let plan = execution_context.state().create_logical_plan(&query).await?;
+        //     println!("{}", plan.display_indent_schema());
+        // }
+
+        // debug physical-plan
+        // {
+        //     let data_frame = execution_context.sql(&query).await?;
+        //     println!("PHYSIACL PLAN");
+        //     let plan = data_frame.create_physical_plan().await?;
+        //     println!("{}", display_plan_ascii(plan.as_ref(), false));
+        // }
+
+        let data_frame = execution_context.sql(&query).await?;
+        let stream = data_frame.execute_stream().await?;
+        let batches = stream.try_collect::<Vec<_>>().await?;
         
-        
-        Ok(fixture::execute_query(query))
+        // debug∂ record-batch
+        // println!("RESULT TABLE");
+        // print_batches(&batches).unwrap();
+
+        let batch = match batches.len() {
+            0 => RecordBatch::new_empty(schema),
+            1 => batches.into_iter().next().unwrap(),
+            _ => {
+                let schema = batches[0].schema();
+                concat_batches(&schema, &batches)?
+            }  
+        };
+        Ok(batch)
     }
-}
-
-mod fixture {
-    use std::sync::Arc;
-    use datafusion::arrow::{array::{BooleanArray, Int32Array, RecordBatch, StringArray}, datatypes::{DataType, Field, Schema}};
-    
-    pub fn execute_query(query: &str) -> RecordBatch {
-        println!("executing query: {query}");
-
-        // Define the arrays (columns)
-        let id_array = Int32Array::from(vec![1, 2, 3]);
-        let name_array = StringArray::from(vec![Some("Alice"), Some("Bob"), None]);
-        let active_array = BooleanArray::from(vec![true, false, true]);
-
-        // Define the schema matching the columns
-        let schema = Schema::new(vec![
-            Field::new("id", DataType::Int32, false),
-            Field::new("name", DataType::Utf8, true),
-            Field::new("active", DataType::Boolean, false),
-        ]);
-
-        // Create the RecordBatch
-        RecordBatch::try_new(
-            Arc::new(schema),
-            vec![
-                Arc::new(id_array),
-                Arc::new(name_array),
-                Arc::new(active_array),
-            ],
-        ).unwrap()
-    }
-
 }

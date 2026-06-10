@@ -11,7 +11,6 @@ mod table_processor_registry;
 use std::sync::Arc;
 
 use anyhow::Result;
-use arrow_flight::flight_service_server::FlightServiceServer;
 use common::proto::grpc_storer_service_server::GrpcStorerServiceServer;
 use datafusion_distributed::{Worker, WorkerServiceServer};
 use metastore::client::MetastoreClient;
@@ -39,13 +38,13 @@ pub async fn start_storer_service(
         .build()
         .await?;
     let table_processor_registry =
-        Arc::new(TableProcessorRegistry::try_new(500, storage, metastore_client).await?);
+        Arc::new(TableProcessorRegistry::try_new(500, storage.clone(), metastore_client).await?);
     let base_storer = StorerFactory::build(&storer_config, table_processor_registry).await?;
     let grpc_server_impl = GrpcServerStorerServiceImpl::new(base_storer.clone());
     let storer_grpc_service = GrpcStorerServiceServer::new(grpc_server_impl);
     let storer_client = StorerClient::new(base_storer.clone());
 
-    let search_worker = SearchWorkerBuilder::build();
+    let search_worker = SearchWorkerBuilder::build(storage.clone());
     let storer_search_worker_grpc_service = search_worker.into_worker_server();
 
     Ok(StorerServiceStartResult {

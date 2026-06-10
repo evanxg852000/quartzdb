@@ -96,6 +96,13 @@ impl TableProcessorRegistry {
         storage: Arc<dyn Storage>,
         metastore_client: MetastoreClient,
     ) -> Result<Arc<TableProcessor>> {
+        // index specific storage
+        let storage = match &table_meta.settings.storage {
+            Some(settings) => {
+                storage.derive_remote(&settings.url).await?
+            },
+            None => storage,
+        };
         let context = Arc::new(
             StorerContext::try_new(Arc::new(table_meta), storage, metastore_client).await?,
         );

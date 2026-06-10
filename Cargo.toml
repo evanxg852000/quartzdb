@@ -61,8 +61,9 @@ url = { version = "2.5", features = ["serde"] }
 object_store = { version = "0.13", features = ["fs", "aws", "gcp", "azure"] }
 bloomfilter = "3.0"
 datafusion = "53.1"
-arrow-flight = "58.3" 
+datafusion-proto = "53.1"
 datafusion-distributed = { git="https://github.com/datafusion-contrib/datafusion-distributed", rev="864b1dd"}
+arrow-flight = "58.3" 
 tantivy = "0.26"
 lance = "4.0"
 lance-datafusion = "4.0"
@@ -83,7 +84,6 @@ bitcode = { version = "0.6", features = ["serde"] }
 hrw-hash = "2.0"
 arrow-json = "58.3"
 
-
 common = { path = "common" }
 storage = { path = "storage" }
 configs = { path = "configs" }
@@ -91,8 +91,3 @@ metastore = { path = "metastore" }
 storer = { path = "storer" }
 ingester = { path = "ingester" }
 searcher = { path = "searcher" }
-
-
-# quartz-insert = { path = "quartz-insert" }
-# quartz-common ={ path = "quartz-common" }
-# quartz-index ={ path = "quartz-index" }
