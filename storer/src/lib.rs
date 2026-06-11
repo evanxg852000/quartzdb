@@ -17,7 +17,7 @@ use metastore::client::MetastoreClient;
 use storage::configs::StorageConfig;
 
 use crate::{
-    client::StorerClient, configs::StorerConfig, impls::{factory::StorerFactory, grpc_server::GrpcServerStorerServiceImpl}, search::worker::SearchWorkerBuilder, table_processor_registry::TableProcessorRegistry
+    client::StorerClient, configs::StorerConfig, impls::{factory::StorerFactory, grpc_server::GrpcServerStorerServiceImpl}, search::{tags_filter::SearchTagsFilterCache, worker::SearchWorkerBuilder}, table_processor_registry::TableProcessorRegistry
 };
 
 const STORER_DIR: &str = "storer";
@@ -37,14 +37,21 @@ pub async fn start_storer_service(
         .derive(STORER_DIR, storer_config.cache.clone())
         .build()
         .await?;
+    let tags_filter_cache = Arc::new(SearchTagsFilterCache::new(500));
+
     let table_processor_registry =
-        Arc::new(TableProcessorRegistry::try_new(500, storage.clone(), metastore_client).await?);
+        Arc::new(TableProcessorRegistry::try_new(
+            500, 
+            storage.clone(), 
+            metastore_client,
+            tags_filter_cache.clone(),
+        ).await?);
     let base_storer = StorerFactory::build(&storer_config, table_processor_registry).await?;
     let grpc_server_impl = GrpcServerStorerServiceImpl::new(base_storer.clone());
     let storer_grpc_service = GrpcStorerServiceServer::new(grpc_server_impl);
     let storer_client = StorerClient::new(base_storer.clone());
 
-    let search_worker = SearchWorkerBuilder::build(storage.clone());
+    let search_worker = SearchWorkerBuilder::build(storage, tags_filter_cache);
     let storer_search_worker_grpc_service = search_worker.into_worker_server();
 
     Ok(StorerServiceStartResult {

@@ -2,14 +2,14 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use common::catalog::TableMeta;
+use common::catalog::{SplitMeta, TableMeta};
 use datafusion::arrow::{array::RecordBatch, compute::concat_batches, util::pretty::print_batches};
 use datafusion_distributed::display_plan_ascii;
 use metastore::{client::MetastoreClient, service::MetastoreService};
 use storage::Storage;
 use futures::TryStreamExt;
 
-use crate::{document::StorerBatch, search::{coordinator::SearchCoordinator, worker_manager::{SearchWorkerManager, SearchWorkerResolver}}, split::writter::SplitWriter};
+use crate::{document::StorerBatch, search::{context::SearchContext, coordinator::SearchCoordinator, tags_filter::SearchTagsFilterCache, worker_manager::{SearchWorkerManager, SearchWorkerResolver}}, split::writter::SplitWriter};
 
 // The number of workers cooperating to execute a query
 const NUM_QUERY_EXECUTOR: usize = 3;
@@ -20,6 +20,7 @@ pub struct StorerContext {
     storage: Arc<dyn Storage>,
     metastore_client: MetastoreClient,
     worker_manager: Arc<SearchWorkerManager>,
+    tags_filter_cache: Arc<SearchTagsFilterCache>,
 }
 
 impl StorerContext {
@@ -27,19 +28,15 @@ impl StorerContext {
         table_meta: Arc<TableMeta>,
         storage: Arc<dyn Storage>,
         metastore_client: MetastoreClient,
+        worker_manager: Arc<SearchWorkerManager>,
+        tags_filter_cache: Arc<SearchTagsFilterCache>,
     ) -> Result<Self> {
-        let mut table_storage = storage;
-        if let Some(index_storage_settings) = &table_meta.settings.storage {
-            table_storage = table_storage
-                .derive_remote(&index_storage_settings.url)
-                .await?;
-        }
-        let worker_manager = Arc::new(SearchWorkerManager::try_new(metastore_client.clone())?);
         Ok(Self {
             table_meta,
-            storage: table_storage,
+            storage,
             metastore_client,
             worker_manager,
+            tags_filter_cache,
         })
     }
 
@@ -98,17 +95,21 @@ impl TableProcessor {
         ).await?;
 
         //TODO: fetch matching splits using metastore_client
-        let split_ids: Vec<String> = vec![
-            "019e97de-ca9a-79b1-8675-f9aeee6d4364".into(),
-            "019e97f7-8459-7fa3-bc13-aff547844078".into(),
+        let splits: Vec<SplitMeta> = vec![
+            create_split("019e97de-ca9a-79b1-8675-f9aeee6d4364", &table_name),
+            create_split("019e97f7-8459-7fa3-bc13-aff547844078", &table_name),
         ];
 
+        let search_context = Arc::new(SearchContext::new(
+            self.context.storage.clone(),
+            self.context.tags_filter_cache.clone(),
+        ));
         let schema = common::schema::Schema::get_primary_schema(&self.context.table_meta.config);
         let execution_context = SearchCoordinator::create_distributed_execution_context(
-            schema.clone(),
-            split_ids,
-            self.context.storage.clone(),
+            self.context.table_meta.clone(),
+            search_context,
             worker_resolver,
+            splits,
         )?;
 
         // debug logical-plan
@@ -143,5 +144,14 @@ impl TableProcessor {
             }  
         };
         Ok(batch)
+    }
+}
+
+
+fn create_split(id: &str, table_name: &str) -> SplitMeta {
+    SplitMeta { 
+        split_id: id.to_string(), 
+        table_name: table_name.to_string(), 
+        min_timestamp: 10, max_timestamp: 20 
     }
 }

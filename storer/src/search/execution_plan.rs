@@ -1,17 +1,15 @@
 use std::{any::Any, sync::Arc};
 
-use datafusion::{arrow::datatypes::SchemaRef, execution::{SendableRecordBatchStream, TaskContext}, physical_expr::EquivalenceProperties, physical_plan::{DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning, PlanProperties, execution_plan::{Boundedness, EmissionType}, stream::RecordBatchStreamAdapter}};
+use datafusion::{arrow::datatypes::{Schema, SchemaRef}, execution::{SendableRecordBatchStream, TaskContext}, physical_expr::EquivalenceProperties, physical_plan::{DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning, PlanProperties, execution_plan::{Boundedness, EmissionType}, stream::RecordBatchStreamAdapter}};
 use datafusion::common::{Result, };
-use storage::Storage;
 use futures::stream::TryStreamExt;
 
-use crate::search::split_searcher::SplitSearcher;
+use crate::search::{context::TableSearchContext, split_searcher::SplitSearcher};
 
 #[derive(Debug)]
 pub struct SplitSearchExec {
-    table_name: String,
-    storage: Arc<dyn Storage>,
-    schema: SchemaRef, // latest table schema
+    context: Arc<TableSearchContext>,
+    schema: Arc<Schema>, // latest table schema
     split_id: String,
     projection: Vec<u64>,
     /// Full-Text-Search experession is the tantivy query 
@@ -26,9 +24,8 @@ pub struct SplitSearchExec {
 
 impl SplitSearchExec {
     pub fn new(
-        table_name: String,
-        storage: Arc<dyn Storage>,
-        schema: SchemaRef, 
+        context: Arc<TableSearchContext>,
+        schema: Arc<Schema>, 
         split_id: String,
         projection: Vec<u64>,
         fts_expr: Option<String>,
@@ -39,15 +36,11 @@ impl SplitSearchExec {
             EmissionType::Both,
             Boundedness::Bounded,
         ));
-        Self { table_name, storage, schema, split_id, projection, fts_expr,  properties }
+        Self { context, schema, split_id, projection, fts_expr,  properties }
     }
 
-    pub fn get_table_name(&self) -> &str {
-        &self.table_name
-    }
-
-    pub fn get_storage(&self) -> &Arc<dyn Storage> {
-        &self.storage
+    pub fn get_context(&self) -> &Arc<TableSearchContext> {
+        &self.context
     }
 
     pub fn get_split_id(&self) -> &str {
@@ -76,8 +69,7 @@ impl ExecutionPlan for SplitSearchExec {
 
     // This method runs locally on your workers/executors
     fn execute(&self, _partition: usize, _context: Arc<TaskContext>) -> Result<SendableRecordBatchStream> {
-        let table_name = self.table_name.clone();
-        let storage = self.storage.clone();
+        let context = self.context.clone();
         let schema = self.schema.clone();
         let split_id = self.split_id.clone();
         let projection = self.projection.clone();
@@ -85,7 +77,7 @@ impl ExecutionPlan for SplitSearchExec {
         
         let moved_schema = schema.clone();
         let future_stream = async move {
-            SplitSearcher::search(storage, table_name, moved_schema, split_id, projection, fts_expr).await
+            SplitSearcher::search(context, moved_schema, split_id, projection, fts_expr).await
         };
         let inner_stream = futures::stream::once(future_stream).try_flatten();
         Ok(Box::pin(RecordBatchStreamAdapter::new(schema, inner_stream)))

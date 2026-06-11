@@ -33,6 +33,8 @@ uuid.workspace = true
 iceberg.workspace = true
 url.workspace = true
 hrw-hash.workspace = true
+quick_cache.workspace = true
+bytes.workspace = true
 
 common.workspace = true
 metastore.workspace = true

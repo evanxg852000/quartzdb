@@ -5,20 +5,24 @@ use datafusion_distributed::{DistributedExt, SessionStateBuilderExt, Worker, Wor
 use storage::Storage;
 use tonic::async_trait;
 
-use crate::search::{execution_codec::SplitSearchExecCodec, funtions::quartzdb_udf_functions, task_estimator::SplitSearchTaskEstimator};
+use crate::search::{context::SearchContext, execution_codec::SplitSearchExecCodec, funtions::quartzdb_udf_functions, tags_filter::SearchTagsFilterCache, task_estimator::SplitSearchTaskEstimator};
 
 
 pub struct SearchWorkerBuilder {
-    storage: Arc<dyn Storage>
+    context: Arc<SearchContext>,
 }
 
 impl SearchWorkerBuilder {
-    pub fn new(storage: Arc<dyn Storage>) -> Self {
-        Self { storage }
+    pub fn new(context: Arc<SearchContext>) -> Self {
+        Self { context }
     }
 
-    pub fn build(storage: Arc<dyn Storage>) -> Worker {
-        let session_builder = Self::new(storage);
+    pub fn build(
+        storage: Arc<dyn Storage>,
+        tags_filter_cache: Arc<SearchTagsFilterCache>,
+    ) -> Worker {
+        let context = Arc::new(SearchContext::new(storage, tags_filter_cache));
+        let session_builder = Self::new(context);
         Worker::from_session_builder(session_builder)
     }
 }
@@ -34,7 +38,7 @@ impl WorkerSessionBuilder for SearchWorkerBuilder {
             .with_default_features()
             .with_scalar_functions(quartzdb_udf_functions())
             .with_distributed_planner()
-            .with_distributed_user_codec(SplitSearchExecCodec::new(self.storage.clone()))
+            .with_distributed_user_codec(SplitSearchExecCodec::new(self.context.clone()))
             .with_distributed_task_estimator(SplitSearchTaskEstimator{})
             .build())
     }

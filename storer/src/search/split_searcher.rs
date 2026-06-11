@@ -1,26 +1,35 @@
 use std::sync::Arc;
 
 use datafusion::{arrow::datatypes::SchemaRef, error::Result, execution::SendableRecordBatchStream, physical_plan::stream::RecordBatchStreamAdapter};
-use storage::Storage;
+
+use crate::search::context::TableSearchContext;
 
 #[derive(Debug)]
-pub struct SplitSearcher {}
+pub struct SplitSearcher {
+    context: Arc<TableSearchContext>,
+}
 
 impl SplitSearcher {
     pub async fn search(
-        storage: Arc<dyn Storage>, 
-        table_name: String,
+        context: Arc<TableSearchContext>,
         schema: SchemaRef, 
         split_id: String,
         projection: Vec<u64>,
         fts_expr: Option<String>,
     ) -> Result<SendableRecordBatchStream> {
+        println!("table_name: {}", context.get_table_meta().name);
         println!("split_id: {}", split_id);
         println!("projection: {:?}", projection);
         println!("fts_expr: {:?}", fts_expr);
         // download split
-        // open index of fts_expr is not null
+        // open (& cache it) index of fts_expr is not null 
         // open parquet 
+        // let split_reader = SplitReader::new(split_id);
+        // split_reader.open()?;
+        // //cache
+        // split_tag_filter = split_reader.get_tag_filter();
+        // context.get_tags_filter_cache().put(split_id, split_tag_filter.clone());
+
 
         //TODO: !!! the last dance !!!
 

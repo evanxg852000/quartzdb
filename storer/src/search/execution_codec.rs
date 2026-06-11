@@ -1,39 +1,40 @@
 use std::sync::Arc;
 
-use datafusion::{arrow::datatypes::Schema, execution::TaskContext};
+use common::catalog::TableMeta;
+use common::schema::Schema;
+use bytes::Bytes;
+use datafusion::execution::TaskContext;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion_proto::physical_plan::PhysicalExtensionCodec;
 use prost::Message;
-use datafusion_proto::protobuf;
 use datafusion_proto::protobuf::proto_error;
 use datafusion::common::{Result, internal_err};
-use storage::Storage;
 
+use crate::search::context::{SearchContext, TableSearchContext};
 use crate::search::execution_plan::SplitSearchExec;
 
 #[derive(Clone, PartialEq, prost::Message)]
 pub struct SplitSearchExecProto {
-    #[prost(string, tag = "1")]
-    pub table_name: prost::alloc::string::String,
+    /// Serialized version of common::TableMeta
+    #[prost(bytes = "bytes", tag = "1")]
+    pub table_meta: ::prost::bytes::Bytes,
     #[prost(string, tag = "2")]
     pub split_id: prost::alloc::string::String,
-    #[prost(message, optional, tag = "3")]
-    pub schema: Option<protobuf::Schema>,
-    #[prost(uint64, repeated, tag = "4")]
+    #[prost(uint64, repeated, tag = "3")]
     pub projection: prost::alloc::vec::Vec<u64>,
-    #[prost(string, optional, tag = "5")]
+    #[prost(string, optional, tag = "4")]
     pub fts_expr: Option<prost::alloc::string::String>,
 }
 
 
 #[derive(Debug)]
 pub struct SplitSearchExecCodec {
-    storage: Arc<dyn Storage>
+    context: Arc<SearchContext>,
 }
 
 impl SplitSearchExecCodec {
-    pub fn new(storage: Arc<dyn Storage>) -> Self {
-        Self { storage }
+    pub fn new(context: Arc<SearchContext>) -> Self {
+        Self { context }
     }
 }
 
@@ -44,25 +45,22 @@ impl PhysicalExtensionCodec for SplitSearchExecCodec {
         inputs: &[Arc<dyn ExecutionPlan>],
         _ctx: &TaskContext,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        println!("EVAN!! {:?}", self.storage);
-
+        println!("EVAN!! {:?}", self.context);
         if !inputs.is_empty() {
-            return internal_err!("NumbersExec should have no children, got {}", inputs.len());
+            return internal_err!("SplitSearchExec should have no children, got {}", inputs.len());
         }
 
         let proto = SplitSearchExecProto::decode(buf)
-            .map_err(|e| proto_error(format!("Failed to decode SplitSearchExecProto: {e}")))?;
-
-        let schema: Schema = proto
-            .schema
-            .as_ref()
-            .map(|s| s.try_into())
-            .ok_or(proto_error("NetworkShuffleExec is missing schema"))??;
-
+            .map_err(|err| proto_error(format!("Failed to decode SplitSearchExecProto: {err}")))?;
+        let table_meta = bitcode::deserialize::<TableMeta>(&proto.table_meta)
+            .map_err(|e| proto_error(format!("Failed to decode TableMeta: {e}")))?;
+        
+        let schema = Schema::get_primary_schema(&table_meta.config);
+        let context = TableSearchContext::try_new(Arc::new(table_meta), self.context.clone())
+            .map_err(|e| proto_error(format!("Failed to create TableSearchContext: {e}")))?;
         Ok(Arc::new(SplitSearchExec::new(
-            proto.table_name,
-            self.storage.clone(),
-            Arc::new(schema), 
+            Arc::new(context),
+            schema, 
             proto.split_id,
             proto.projection,
             proto.fts_expr,
@@ -74,9 +72,10 @@ impl PhysicalExtensionCodec for SplitSearchExecCodec {
             return internal_err!("codec: Expected plan to be SplitSearchExec, but was {}", node.name());
         };
 
+        let data = bitcode::serialize(exec.get_context().get_table_meta())
+            .map_err(|err| proto_error(format!("Failed to encode TableMeta: {err}")))?;
         let proto = SplitSearchExecProto {
-            table_name: exec.get_table_name().to_string(),
-            schema: Some(node.schema().try_into()?),
+            table_meta: Bytes::from(data),
             split_id: exec.get_split_id().to_string(),
             projection: exec.get_projection().clone(),
             fts_expr: exec.get_fts_expr().clone(),
