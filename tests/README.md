@@ -5,7 +5,7 @@
 cargo run -- run
 
 # upsert table
-cargo run -- table put --file ./tests/data/logs-index-config.yaml
+cargo run -- table put --file ./tests/data/logs-table-config.yaml
 
 # list tables
 cargo run -- table list

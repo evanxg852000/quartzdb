@@ -15,10 +15,11 @@ pub struct SplitSearchExec {
     /// Full-Text-Search experession is the tantivy query 
     /// extracted from SQL.
     /// example:
-    /// `SELECT* from products 
-    ///     WHERE quartzdb.search("description:*ali")
+    /// `SELECT* from qtz_search(logs, 'description:*ali') 
+    ///     WHERE severity = 'error'
     /// ` -> description:*ali
     fts_expr: Option<String>, 
+    limit: Option<u64>,
     properties: Arc<PlanProperties>,
 }
 
@@ -29,6 +30,7 @@ impl SplitSearchExec {
         split_id: String,
         projection: Vec<u64>,
         fts_expr: Option<String>,
+        limit: Option<u64>,
     ) -> Self {
         let properties = Arc::new(PlanProperties::new(
             EquivalenceProperties::new(schema.clone()),
@@ -36,7 +38,7 @@ impl SplitSearchExec {
             EmissionType::Both,
             Boundedness::Bounded,
         ));
-        Self { context, schema, split_id, projection, fts_expr,  properties }
+        Self { context, schema, split_id, projection, fts_expr, limit, properties }
     }
 
     pub fn get_context(&self) -> &Arc<TableSearchContext> {
@@ -54,6 +56,11 @@ impl SplitSearchExec {
     pub fn get_fts_expr(&self) -> &Option<String> {
         &self.fts_expr
     }
+
+    pub fn get_limit(&self) -> &Option<u64> {
+        &self.limit
+    }
+
 }
 
 impl ExecutionPlan for SplitSearchExec {
@@ -74,10 +81,11 @@ impl ExecutionPlan for SplitSearchExec {
         let split_id = self.split_id.clone();
         let projection = self.projection.clone();
         let fts_expr = self.fts_expr.clone();
+        let limit = self.limit.clone();
         
         let moved_schema = schema.clone();
         let future_stream = async move {
-            SplitSearcher::search(context, moved_schema, split_id, projection, fts_expr).await
+            SplitSearcher::search(context, moved_schema, split_id, projection, fts_expr, limit).await
         };
         let inner_stream = futures::stream::once(future_stream).try_flatten();
         Ok(Box::pin(RecordBatchStreamAdapter::new(schema, inner_stream)))

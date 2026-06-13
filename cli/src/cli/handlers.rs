@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use datafusion::arrow::util::pretty::pretty_format_batches;
 use ingester::IngesterServiceStartResult;
 use metastore::MetastoreServiceStartResult;
 use searcher::{SearcherServiceStartResult, web::SearchRequest};
@@ -8,7 +9,7 @@ use storer::StorerServiceStartResult;
 use tokio::fs;
 use tokio_util::io::ReaderStream;
 
-use crate::cli::utils;
+use crate::cli::utils::{self, json_array_record_batch};
 use common::{
     catalog::TableMeta,
     models::{ApiError, ApiOk, AppInfo},
@@ -238,20 +239,27 @@ pub async fn handle_search(
         .await?;
     match response.status().is_success() {
         true => {
-            println!("{:?}", response.text().await);
-
-            // let api_response = response.json::<ApiOk<serde_json::Value>>().await?;
-            // let value = api_response.data.unwrap();
-            
-            // let data = value.as_object()
-            //     .unwrap()
-            //     .get("data")
-            //     .unwrap();
-            // println!("{}", data.to_string());
+            // println!("{:?}", response.text().await);
+            let api_response = response.json::<ApiOk<serde_json::Value>>().await?;
+            let value = api_response.data.unwrap();
+            let error = value.as_object()
+                .unwrap()
+                .get("error");
+            if let Some(error) = error {
+                eprintln!("{}", error.as_str().unwrap());
+            } else {
+                let data = value.as_object()
+                    .unwrap()
+                    .get("data")
+                    .unwrap();
+                let batch = json_array_record_batch(data)?;
+                let formatted = pretty_format_batches(&vec![batch])?;
+                println!("{formatted}");
+            }
         }
         false => {
             let api_error = response.json::<ApiError>().await?;
-            println!("ERROR: {:?} ", api_error);
+            eprintln!("{}", api_error.to_string());
         }
     }
     Ok(())

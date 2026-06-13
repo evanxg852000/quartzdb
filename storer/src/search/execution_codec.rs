@@ -24,6 +24,8 @@ pub struct SplitSearchExecProto {
     pub projection: prost::alloc::vec::Vec<u64>,
     #[prost(string, optional, tag = "4")]
     pub fts_expr: Option<prost::alloc::string::String>,
+    #[prost(uint64, optional, tag = "5")]
+    pub limit: Option<u64>,
 }
 
 
@@ -64,6 +66,7 @@ impl PhysicalExtensionCodec for SplitSearchExecCodec {
             proto.split_id,
             proto.projection,
             proto.fts_expr,
+            proto.limit,
         )))
     }
 
@@ -79,6 +82,7 @@ impl PhysicalExtensionCodec for SplitSearchExecCodec {
             split_id: exec.get_split_id().to_string(),
             projection: exec.get_projection().clone(),
             fts_expr: exec.get_fts_expr().clone(),
+            limit: exec.get_limit().clone(),
         };
 
         proto

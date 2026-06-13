@@ -95,9 +95,10 @@ impl TableProcessor {
         ).await?;
 
         //TODO: fetch matching splits using metastore_client
+        //self.context.metastore_client.list_splits(&table_name, start_timestamp, end_timestamp)
         let splits: Vec<SplitMeta> = vec![
-            create_split("019e97de-ca9a-79b1-8675-f9aeee6d4364", &table_name),
-            create_split("019e97f7-8459-7fa3-bc13-aff547844078", &table_name),
+            create_split("019ec073-3a36-7ce2-aad6-2a8b9721b4cb", &table_name),
+            create_split("019ec073-1543-7d32-884d-1f56019ca413", &table_name),
         ];
 
         let search_context = Arc::new(SearchContext::new(

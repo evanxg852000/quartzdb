@@ -44,6 +44,7 @@ fastbloom = { workspace = true }
 futures = { workspace = true }
 tonic = { workspace = true }
 bitcode = { workspace = true }
+arrow-json  = { workspace = true }
 
 common = { workspace = true }
 configs = { workspace = true }

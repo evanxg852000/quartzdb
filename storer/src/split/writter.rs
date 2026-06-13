@@ -3,14 +3,13 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::Result;
 use common::{
     catalog::{FieldType, FieldValue, SplitMeta, TableConfig},
-    schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_INDEX_FIELD_NAME, Schema},
+    schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_ID_FIELD_NAME, Schema},
 };
 use datafusion::{
     arrow::array::{
         ArrayRef, BooleanArray, Float64Array, Int64Array, LargeStringBuilder, RecordBatch,
-        StringArray, TimestampNanosecondBuilder, UInt64Array,
-    },
-    parquet::{arrow::AsyncArrowWriter, basic::Compression, file::properties::WriterProperties},
+        StringArray, TimestampNanosecondBuilder, UInt64Array, UInt64Builder,
+    }, config::ParquetOptions, parquet::{arrow::AsyncArrowWriter, basic::{Compression, ZstdLevel}, file::properties::{EnabledStatistics, WriterProperties}}
 };
 use fastbloom::BloomFilter;
 use storage::Storage;
@@ -80,11 +79,11 @@ impl SplitWriter {
         let mut index_writer = index.writer_with_num_threads(2, INDEXING_MEMORY_BUDGET)?;
         let mut bloom_filter = BloomFilter::with_false_pos(0.001).expected_items(batch.len());
 
-        let row_index_field = fts_schema.get_field(QUARTZDB_ROW_INDEX_FIELD_NAME)?;
+        let row_id_field = fts_schema.get_field(QUARTZDB_ROW_ID_FIELD_NAME)?;
         let labels_field = fts_schema.get_field(QUARTZDB_LABELS_FIELD_NAME)?;
         for (index, document) in batch.documents.iter().enumerate() {
             index_writer.add_document(tantivy::doc!(
-                row_index_field => index as u64,
+                row_id_field => (index +1) as u64,
                 labels_field => document.labels,
             ))?;
             for tag in &document.tags {
@@ -134,6 +133,7 @@ impl SplitWriter {
     async fn write_data(&self, table_config: &TableConfig, batch: StorerBatch) -> Result<()> {
         let data_schema = Schema::get_primary_schema(table_config);
         let capacity = batch.documents.len();
+        let mut ids_builder = UInt64Builder::new();
         let mut timestamps_builder =
             TimestampNanosecondBuilder::with_capacity(capacity).with_timezone("UTC");
         let mut sources_builder = LargeStringBuilder::with_capacity(capacity, capacity * 200);
@@ -150,7 +150,8 @@ impl SplitWriter {
         }
 
         // group columnar values while building timestamp & source arrays
-        for document in batch.documents {
+        for (index, document) in batch.documents.into_iter().enumerate() {
+            ids_builder.append_value((index+1) as u64);
             timestamps_builder.append_value(document.timestamp);
             sources_builder.append_value(document.source);
 
@@ -161,6 +162,7 @@ impl SplitWriter {
         }
 
         let mut column_data: Vec<ArrayRef> = vec![
+            Arc::new(ids_builder.finish()),
             Arc::new(timestamps_builder.finish()),
             Arc::new(sources_builder.finish()),
         ];
@@ -195,10 +197,11 @@ impl SplitWriter {
             column_data.push(column_array);
         }
 
-        // try clickHouse pros to see
+        // try ClickHouse props to see
         let parquet_opts = WriterProperties::builder()
-            .set_compression(Compression::SNAPPY)
+            .set_compression(Compression::ZSTD(ZstdLevel::try_new(11)?))
             .set_max_row_group_row_count(Some(1024 * 2))
+            .set_statistics_enabled(EnabledStatistics::Page) // enable page indexing
             .build();
         let scratch_data_file_path = self.scratch_dir.as_ref().join("data.qtz");
         let batch: RecordBatch = RecordBatch::try_new(data_schema, column_data).unwrap();

@@ -76,7 +76,7 @@ impl TableProvider for SplitSearchTableProvider {
         _state: &dyn Session,
         projection: Option<&Vec<usize>>,
         filters: &[Expr],
-        _limit: Option<usize>,
+        limit: Option<usize>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
         let plan_projection = projection
             .map(|indices| indices
@@ -84,6 +84,7 @@ impl TableProvider for SplitSearchTableProvider {
                 .map(|i|*i as u64)
                 .collect::<Vec<_>>()
             ).unwrap_or_default();
+        let plan_limit = limit.map(|val| val as u64);
         let split_plans = self
             .prune_splits(filters)
             .into_iter()
@@ -92,7 +93,8 @@ impl TableProvider for SplitSearchTableProvider {
                 self.schema.clone(), 
                 split.split_id, 
                 plan_projection.clone(), 
-                self.fts_expr.clone()
+                self.fts_expr.clone(),
+                plan_limit,
             )) as Arc<dyn ExecutionPlan>)
             .collect::<Vec<_>>();
         Ok(UnionExec::try_new(split_plans)?)

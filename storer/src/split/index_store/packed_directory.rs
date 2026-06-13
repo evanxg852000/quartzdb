@@ -22,9 +22,13 @@ impl Debug for PackedDirectory {
 }
 
 impl PackedDirectory {
-    pub async fn new(path: impl AsRef<Path>) -> Result<Self> {
-        let reader = Arc::new(PackedFileReader::new(path).await?);
-        Ok(Self { reader })
+    pub fn new(packed_file_reader: PackedFileReader)-> Self {
+        Self { reader: Arc::new(packed_file_reader) }
+    }
+
+    pub async fn try_new(path: impl AsRef<Path>) -> Result<Self> {
+        let packed_file_reader = PackedFileReader::new(path).await?;
+        Ok(Self::new(packed_file_reader))
     }
 }
 

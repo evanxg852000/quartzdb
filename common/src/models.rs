@@ -48,6 +48,13 @@ impl IntoResponse for ApiError {
     }
 }
 
+impl ToString for ApiError {
+    fn to_string(&self) -> String {
+        format!("Status: {}: {}", self.status_code, self.error)
+    }
+}
+
+
 #[derive(Serialize, Deserialize)]
 pub struct AppInfo {
     pub message: String,

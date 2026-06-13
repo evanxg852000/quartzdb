@@ -9,7 +9,7 @@ use tantivy::schema::{self as tantivy_schema};
 
 use crate::catalog::{FieldConfig, FieldType, FieldValue, TableConfig};
 
-pub const QUARTZDB_ROW_INDEX_FIELD_NAME: &'static str = "__qtz_index";
+pub const QUARTZDB_ROW_ID_FIELD_NAME: &'static str = "__qtz_id";
 pub const QUARTZDB_LABELS_FIELD_NAME: &'static str = "__qtz_labels";
 pub const QUARTZDB_TIMESTAMP_FIELD_NAME: &'static str = "__qtz_timestamp";
 pub const QUARTZDB_SOURCE_FIELD_NAME: &'static str = "__qtz_source";
@@ -23,6 +23,11 @@ impl Schema {
     pub fn get_primary_schema(table_config: &TableConfig) -> Arc<datafusion_schema::Schema> {
         let capacity = table_config.fields.len() + 3;
         let mut fields = Vec::with_capacity(capacity);
+        fields.push(datafusion_schema::Field::new(
+            QUARTZDB_ROW_ID_FIELD_NAME,
+            datafusion_schema::DataType::UInt64,
+            false,
+        ));
         fields.push(datafusion_schema::Field::new(
             QUARTZDB_TIMESTAMP_FIELD_NAME,
             datafusion_schema::DataType::Timestamp(
@@ -56,7 +61,7 @@ impl Schema {
 
         // row_id field
         schema_builder.add_u64_field(
-            QUARTZDB_ROW_INDEX_FIELD_NAME,
+            QUARTZDB_ROW_ID_FIELD_NAME,
             tantivy_schema::INDEXED | tantivy_schema::FAST,
         );
 
