@@ -27,7 +27,7 @@ impl SplitSearchTableProvider {
         splits: Vec<SplitMeta>,
         fts_expr: Option<String>,
     ) -> Self {
-        let schema = context.get_table_primary_schema();
+        let schema = context.get_primary_schema();
         Self { 
             context,
             schema,
@@ -59,6 +59,7 @@ impl SplitSearchTableProvider {
         // }
         active_splits
     }
+
 }
 
 #[async_trait]
@@ -78,24 +79,19 @@ impl TableProvider for SplitSearchTableProvider {
         filters: &[Expr],
         limit: Option<usize>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        let plan_projection = projection
-            .map(|indices| indices
-                .iter()
-                .map(|i|*i as u64)
-                .collect::<Vec<_>>()
-            ).unwrap_or_default();
-        let plan_limit = limit.map(|val| val as u64);
         let split_plans = self
             .prune_splits(filters)
             .into_iter()
-            .map(|split| Arc::new(SplitSearchExec::new(
-                self.context.clone(),
-                self.schema.clone(), 
-                split.split_id, 
-                plan_projection.clone(), 
-                self.fts_expr.clone(),
-                plan_limit,
-            )) as Arc<dyn ExecutionPlan>)
+            .map(|split| 
+                Arc::new(SplitSearchExec::new(
+                    self.context.clone(),
+                    self.schema.clone(), 
+                    split.split_id, 
+                    projection.cloned(), 
+                    self.fts_expr.clone(),
+                    limit,
+                )) as Arc<dyn ExecutionPlan>
+            )
             .collect::<Vec<_>>();
         Ok(UnionExec::try_new(split_plans)?)
     }

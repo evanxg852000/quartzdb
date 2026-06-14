@@ -64,7 +64,7 @@ impl TableSearchContext {
         &self.table_meta
     }
 
-    pub fn get_table_primary_schema(&self) -> SchemaRef {
+    pub fn get_primary_schema(&self) -> SchemaRef {
         Schema::get_primary_schema(&self.table_meta.config)
     }
 

@@ -1,10 +1,10 @@
 use std::{path::PathBuf, sync::Arc};
 
-use common::schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_ID_FIELD_NAME, QUARTZDB_SOURCE_FIELD_NAME};
+use common::schema::{QUARTZDB_LABELS_FIELD_NAME, QUARTZDB_ROW_ID_FIELD_NAME};
 use datafusion::{arrow::datatypes::SchemaRef, error::{DataFusionError, Result}, execution::{SendableRecordBatchStream, context::SessionContext, options::ParquetReadOptions}, logical_expr::Expr, physical_plan::EmptyRecordBatchStream, };
 use fastbloom::BloomFilter;
 use datafusion::prelude::*;
-use storage::Storage;
+// use storage::Storage;
 
 use tantivy::query::QueryParser;
 
@@ -13,8 +13,10 @@ use crate::{search::context::TableSearchContext, split::index_store::{fast_field
 pub struct SplitReader {
     split_id: String,
     split_dir: PathBuf,
-    tag_filter: BloomFilter,        // decoded bloom filter
-    index_store: tantivy::Index,    //opened ind
+    /// decoded bloom filter
+    tag_filter: BloomFilter,   
+    /// openned tantivy index 
+    index_store: tantivy::Index,
     column_store_file: String, 
 }
 
@@ -59,10 +61,10 @@ impl SplitReader {
     pub async fn search(
         &self, 
         schema: SchemaRef,
-        projection: Vec<u64>,
+        projection: Option<Vec<usize>>,
         // filters: &[Expr], // data , timestamp 
         fts_expr: Option<String>,
-        limit: Option<u64>,
+        limit: Option<usize>,
     ) -> Result<SendableRecordBatchStream> {
         let fts_matched_ids = self.search_index_store(fts_expr, limit)
             .await
@@ -71,7 +73,7 @@ impl SplitReader {
         self.fetch_column_store(schema, projection, fts_matched_ids, limit).await
     }
 
-    async fn search_index_store(&self, fts_expr: Option<String>,  limit: Option<u64>) -> anyhow::Result<Option<Vec<u64>>> {
+    async fn search_index_store(&self, fts_expr: Option<String>,  limit: Option<usize>) -> anyhow::Result<Option<Vec<u64>>> {
         match fts_expr {
             None => Ok(None),
             Some(fts_expr) if fts_expr == "*" => Ok(None),
@@ -97,15 +99,16 @@ impl SplitReader {
     async fn fetch_column_store(
         &self, 
         schema: SchemaRef,
-        projection: Vec<u64>,
+        projection: Option<Vec<usize>>,
         fts_matched_ids: Option<Vec<u64>>,
-        limit: Option<u64>,
+        limit: Option<usize>,
     ) -> Result<SendableRecordBatchStream> {
         let ctx = SessionContext::new();
-        let mut read_options = ParquetReadOptions::default();
-        read_options.file_extension = ""; 
+        let read_options = ParquetReadOptions::default()
+            .file_extension("")
+            .schema(&*schema);
         let mut df = ctx.read_parquet(&self.column_store_file, read_options).await?;
-        
+
         if let Some(fts_matched_ids) = fts_matched_ids  {
             if fts_matched_ids.is_empty() {
                 return Ok(Self::empty_stream(schema));
@@ -121,10 +124,10 @@ impl SplitReader {
             ))?;
         }
 
-        if !projection.is_empty() {
-            let field_names = projection
+        if let Some(indices) = projection {
+            let field_names = indices
                 .iter()
-                .map(|idx| schema.field(*idx as usize).name().clone())
+                .map(|i| schema.field(*i).name().clone())
                 .collect::<Vec<_>>();
             let df_projection = field_names
                 .iter()
@@ -137,7 +140,7 @@ impl SplitReader {
             df = df.limit(0, Some(limit as usize))?;
         }
 
-        df = df.drop_columns(&[QUARTZDB_ROW_ID_FIELD_NAME])?;
+        // df = df.drop_columns(&[QUARTZDB_ROW_ID_FIELD_NAME])?;
         df.execute_stream().await
     }
 

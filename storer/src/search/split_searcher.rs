@@ -14,10 +14,10 @@ impl SplitSearcher {
         context: Arc<TableSearchContext>,
         schema: SchemaRef, 
         split_id: String,
-        projection: Vec<u64>,
+        projection: Option<Vec<usize>>,
         // filters: &[Expr],
         fts_expr: Option<String>,
-        limit: Option<u64>,
+        limit: Option<usize>,
     ) -> Result<SendableRecordBatchStream> {
         println!("table_name: {}", context.get_table_meta().name);
         println!("split_id: {}", split_id);

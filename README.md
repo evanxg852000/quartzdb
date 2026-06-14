@@ -19,7 +19,8 @@ cargo run -- table list
 cargo run -- ingest --name logs --file ./tests/data/sample-logs.ndjson
 
 # query table (with sql)
-cargo run -- search --name logs --query "select * from qtz_search(logs, 'foo:*ali') as t limit 5"
+cargo run -- search --name logs --query "SELECT * from qtz_search(logs, 'foo:*ali') as t limit 5"
+cargo run -- search --name logs --query "SELECT COUNT(*) from qtz_search(logs, 'hostname:*mobi')"
 
 # delete table
 cargo run -- table delete --name logs

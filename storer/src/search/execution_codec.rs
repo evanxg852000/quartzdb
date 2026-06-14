@@ -60,13 +60,18 @@ impl PhysicalExtensionCodec for SplitSearchExecCodec {
         let schema = Schema::get_primary_schema(&table_meta.config);
         let context = TableSearchContext::try_new(Arc::new(table_meta), self.context.clone())
             .map_err(|e| proto_error(format!("Failed to create TableSearchContext: {e}")))?;
+        let projection = match proto.projection.is_empty() {
+            true => None,
+            false => Some(proto.projection.into_iter().map(|v| v as usize).collect::<Vec<_>>())
+        };
+        
         Ok(Arc::new(SplitSearchExec::new(
             Arc::new(context),
             schema, 
             proto.split_id,
-            proto.projection,
+            projection,
             proto.fts_expr,
-            proto.limit,
+            proto.limit.map(|v| v as usize),
         )))
     }
 
@@ -77,12 +82,16 @@ impl PhysicalExtensionCodec for SplitSearchExecCodec {
 
         let data = bitcode::serialize(exec.get_context().get_table_meta())
             .map_err(|err| proto_error(format!("Failed to encode TableMeta: {err}")))?;
+        let projection = match exec.get_projection().clone() {
+            None => vec![],
+            Some(indices) => indices.into_iter().map(|v| v as u64).collect(),
+        };
         let proto = SplitSearchExecProto {
             table_meta: Bytes::from(data),
             split_id: exec.get_split_id().to_string(),
-            projection: exec.get_projection().clone(),
+            projection,
             fts_expr: exec.get_fts_expr().clone(),
-            limit: exec.get_limit().clone(),
+            limit: exec.get_limit().clone().map(|v| v as u64),
         };
 
         proto
