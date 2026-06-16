@@ -37,7 +37,9 @@ impl TableFunctionImpl for SplitSearchTableFunction {
     fn call(&self, args: &[Expr]) -> Result<Arc<dyn TableProvider>> {
         // get table name & validate
         let table_name = match args.get(0) {
-            Some(Expr::Literal(ScalarValue::Utf8(Some(val)), _)) => val.to_string(),
+            Some(Expr::Literal(ScalarValue::Utf8View(Some(val)), _)) 
+            | Some(Expr::Literal(ScalarValue::Utf8(Some(val)), _)) 
+            | Some(Expr::Literal(ScalarValue::LargeUtf8(Some(val)), _)) => val.to_string(),
             Some(Expr::Column(col)) => col.name.clone(),
             _ => return Err(DataFusionError::Plan("Invalid table name".to_string())),
         };
@@ -47,7 +49,9 @@ impl TableFunctionImpl for SplitSearchTableFunction {
         }
 
         let fts_expr = match args.get(1) {
-            Some(Expr::Literal(ScalarValue::Utf8(Some(val)), _)) => {
+            Some(Expr::Literal(ScalarValue::Utf8View(Some(val)), _))
+            | Some(Expr::Literal(ScalarValue::Utf8(Some(val)), _))
+            | Some(Expr::Literal(ScalarValue::LargeUtf8(Some(val)), _)) => {
                 if val.is_empty() { 
                     None 
                 } else { 

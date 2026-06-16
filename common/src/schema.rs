@@ -38,7 +38,7 @@ impl Schema {
         ));
         fields.push(datafusion_schema::Field::new(
             QUARTZDB_SOURCE_FIELD_NAME,
-            datafusion_schema::DataType::LargeUtf8,
+            datafusion_schema::DataType::Utf8View,
             false,
         ));
 
@@ -48,7 +48,7 @@ impl Schema {
                 FieldType::Int => datafusion_schema::DataType::Int64,
                 FieldType::Float => datafusion_schema::DataType::Float64,
                 FieldType::Bool => datafusion_schema::DataType::Boolean,
-                FieldType::String => datafusion_schema::DataType::Utf8,
+                FieldType::String => datafusion_schema::DataType::Utf8View,
             };
             let arrow_field = datafusion_schema::Field::new(field.name.as_str(), arrow_type, true);
             fields.push(arrow_field);

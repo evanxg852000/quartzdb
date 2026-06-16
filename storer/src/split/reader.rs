@@ -163,7 +163,7 @@ mod fixture {
         // Define the schema matching the columns
         let schema = Schema::new(vec![
             Field::new("id", DataType::Int32, false),
-            Field::new("name", DataType::Utf8, true),
+            Field::new("name", DataType::Utf8View, true),
             Field::new("active", DataType::Boolean, false),
         ]);
 
