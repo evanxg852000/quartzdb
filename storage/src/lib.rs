@@ -1,5 +1,5 @@
-pub mod configs;
 pub mod cachable_storage;
+pub mod configs;
 pub mod error;
 pub mod local_storage;
 pub mod object_storage;
@@ -15,7 +15,6 @@ use std::sync::Arc;
 use std::{io, path::Path};
 use tempfile::TempDir;
 use url::Url;
-
 
 pub struct StorgeConfig {}
 
@@ -53,8 +52,6 @@ pub trait Storage: Send + Sync + Debug {
 
     async fn delete(&self, location: &str) -> io::Result<()>;
 }
-
-
 
 #[cfg(test)]
 mod tests {

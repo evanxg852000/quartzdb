@@ -1,8 +1,11 @@
 use anyhow::Result;
 use tokio::sync::oneshot;
 
-use crate::{commands::{IngesterCommand, IngesterMailbox}, table_processor::{BatchProcessorPolicy, ProcessingReport}, document::IngestBatch};
-
+use crate::{
+    commands::{IngesterCommand, IngesterMailbox},
+    document::IngestBatch,
+    table_processor::{BatchProcessorPolicy, ProcessingReport},
+};
 
 #[derive(Debug, Clone)]
 pub struct IngesterClient {

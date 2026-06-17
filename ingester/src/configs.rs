@@ -7,8 +7,6 @@ pub struct IngesterConfig {
 
 impl Default for IngesterConfig {
     fn default() -> Self {
-        IngesterConfig {
-            enable: false,
-        }
+        IngesterConfig { enable: false }
     }
 }

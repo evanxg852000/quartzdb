@@ -1,16 +1,23 @@
-use std::{error::Error, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::Result;
 // use datafusion::{arrow::{array::{RecordBatch, StringBuilder}, datatypes::Field}, parquet::data_type::DataType};
-use datafusion::{arrow::{array::{RecordBatch, StringBuilder}, datatypes::{DataType, Field, Schema as DataFusionSchema}}};
-use serde_json::Value as JsonValue;
+use datafusion::arrow::{
+    array::{RecordBatch, StringBuilder},
+    datatypes::{DataType, Field, Schema as DataFusionSchema},
+};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use storage::Storage;
 
 use crate::document::{IngestBatch, IngestDocument};
-use storer::{client::StorerClient, service::{StorerPutRequest, StorerPutRequestInfo, StorerService}};
-use common::{catalog::{TableConfig, TableMeta}, schema::Schema};
-
+use common::{
+    catalog::{TableConfig, TableMeta}, schema::Schema
+};
+use storer::{
+    client::StorerClient,
+    service::StorerService,
+};
 
 const SOURCE_COLUMN_NAME: &'static str = "_source";
 
@@ -37,7 +44,6 @@ pub enum BatchProcessorPolicy {
     Lenient,
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProcessingReport {
     pub num_docs: usize,
@@ -55,10 +61,10 @@ impl ProcessingReport {
     }
 
     pub fn from_error<E: ToString>(err: &E) -> Self {
-        Self { 
+        Self {
             num_docs: 0,
             accepted: false,
-            errors: vec![ValidationError::new("", 0, err.to_string())] 
+            errors: vec![ValidationError::new("", 0, err.to_string())],
         }
     }
 
@@ -74,7 +80,6 @@ impl ProcessingReport {
         self.errors.iter()
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct IngesterContext {
@@ -118,30 +123,26 @@ impl TableProcessor {
     pub async fn process_batch(
         &self,
         batch: IngestBatch,
-        policy: BatchProcessorPolicy, 
+        policy: BatchProcessorPolicy,
     ) -> Result<ProcessingReport> {
-        let (storer_put_request, report) = process_batch(&self.context, batch, policy)?;
+        let (table_name, record_batch, report) = process_batch(&self.context, batch, policy)?;
         if !report.accepted {
             return Ok(report);
         }
 
-        //TODO: store batch in WAL & reply to client before 
+        //TODO: store batch in WAL & reply to client before
         // putting to storer. spawn task to put to storer with support for retrying on failure.
         // once storer put succeeds, truncate the wall
-        self.context
-            .storer_client
-            .put(storer_put_request)
-            .await?;
+        self.context.storer_client.put(&table_name, record_batch).await?;
         Ok(report)
     }
 }
-
 
 fn process_batch(
     context: &IngesterContext,
     batch: IngestBatch,
     policy: BatchProcessorPolicy,
-) -> Result<(StorerPutRequest, ProcessingReport)> {
+) -> Result<(String, RecordBatch, ProcessingReport)> {
     let mut report = ProcessingReport::new(batch.len());
     let mut document_source_array_builder = StringBuilder::new();
     for document in batch.0 {
@@ -156,20 +157,20 @@ fn process_batch(
     }
 
     let record_batch = RecordBatch::try_new(
-        Arc::new(DataFusionSchema::new(vec![
-            Field::new(SOURCE_COLUMN_NAME, DataType::Utf8, false),
-        ])),
+        Arc::new(DataFusionSchema::new(vec![Field::new(
+            SOURCE_COLUMN_NAME,
+            DataType::Utf8View,
+            false,
+        )])),
         vec![Arc::new(document_source_array_builder.finish())],
     )?;
 
-     let storer_put_request = StorerPutRequest {
-        info: StorerPutRequestInfo {
-            table_name: context.table_meta.name.clone(),
-        },
-        data: record_batch,
-    };
+    // let storer_put_request = PutRequest {
+    //     table_name: context.table_meta.name.clone(),
+    //     record_batch: record_batch_to_bytes(record_batch)?,
+    // };
 
-    Ok((storer_put_request, report))
+    Ok((context.table_meta.name.clone(), record_batch, report))
 }
 
 fn validate_document(

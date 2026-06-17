@@ -5,7 +5,11 @@ use object_store::path::Path;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-use crate::{Storage, cachable_storage::{CachableStorage, CacheConfig}, local_storage::LocalStorage};
+use crate::{
+    Storage,
+    cachable_storage::{CachableStorage, CacheConfig},
+    local_storage::LocalStorage,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct StorageConfig {

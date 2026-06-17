@@ -27,6 +27,9 @@ json_dotpath.workspace = true
 tantivy.workspace = true
 datafusion.workspace = true
 jiff.workspace = true
+bytes.workspace = true
+arrow-json.workspace = true
+hrw-hash.workspace = true
 
 [build-dependencies]
 prost-build.workspace = true

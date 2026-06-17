@@ -1,14 +1,19 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use datafusion::arrow::util::pretty::pretty_format_batches;
 use ingester::IngesterServiceStartResult;
 use metastore::MetastoreServiceStartResult;
+use searcher::{SearcherServiceStartResult, web::SearchRequest};
 use storer::StorerServiceStartResult;
 use tokio::fs;
 use tokio_util::io::ReaderStream;
 
-use crate::cli::utils;
-use common::{catalog::TableMeta, models::{ApiError, ApiOk, AppInfo}};
+use crate::cli::utils::{self, json_array_record_batch};
+use common::{
+    catalog::TableMeta,
+    models::{ApiError, ApiOk, AppInfo},
+};
 use configs::QuartzConfig;
 use tonic::service::Routes;
 
@@ -52,39 +57,51 @@ pub async fn handle_run(config: QuartzConfig) -> anyhow::Result<()> {
     // initilize storer
     let storer_client = match config.storer.enable {
         true => {
+            println!("Starting storer service...");
             let StorerServiceStartResult {
                 storer_client,
-                storer_store_grpc_service,
-                ..
-            } = storer::start_storer_service(&config.storer, &config.storage, metastore_client.clone()).await?;
-            grpc_router_builder.add_service(storer_store_grpc_service);
+                storer_grpc_service,
+                storer_search_worker_grpc_service,
+            } = storer::start_storer_service(
+                &config.storer,
+                &config.storage,
+                metastore_client.clone(),
+            )
+            .await?;
+            grpc_router_builder.add_service(storer_grpc_service);
+            grpc_router_builder.add_service(storer_search_worker_grpc_service);
             Some(storer_client)
-        },
+        }
         false => None,
     };
-    
+
     if config.ingester.enable {
         println!("Starting ingester service...");
         let IngesterServiceStartResult {
             ingester_http_router,
-        } = ingester::start_ingester_service(&config.ingester, &config.storage, metastore_client, storer_client.clone()).await?;
+        } = ingester::start_ingester_service(
+            &config.ingester,
+            &config.storage,
+            metastore_client.clone(),
+            storer_client.clone(),
+        )
+        .await?;
         services_router = services_router.merge(ingester_http_router);
     }
 
-
-
-    
-    // let mut storer_service = StorerService::new(&config.storer, metastore_client.clone()).await?;
-    // storer_service.start().await?;
-    // let storer_client = storer_service.new_client();
-
-    // let mut metastore_service = MetastoreService::try_new(&config).await?;
-    // metastore_service.start().await?;
-    // let metastore_client = metastore_service.new_client();
-
-    // let mut ingest_service = IndexerService::new(metastore_client.clone(), storer_client);
-    // ingest_service.start().await?;
-    // let ingest_client = ingest_service.new_client();
+    if config.searcher.enable {
+        println!("Starting searcher service...");
+        let SearcherServiceStartResult {
+            searcher_http_router,
+        } = searcher::start_searcher_service(
+            &config.searcher,
+            &config.storage,
+            metastore_client,
+            storer_client.clone(),
+        )
+        .await?;
+        services_router = services_router.merge(searcher_http_router);
+    }
 
     let http_router = axum::Router::new()
         .route(
@@ -150,7 +167,8 @@ pub async fn handle_table_delete(config: QuartzConfig, table_name: &str) -> anyh
     let response = client
         .delete(format!(
             "{}/api/v1/metastore/tables/{}",
-            config.endpoint(), table_name
+            config.endpoint(),
+            table_name
         ))
         .send()
         .await?;
@@ -179,7 +197,8 @@ pub async fn handle_ingest(
     let response = client
         .post(format!(
             "{}/api/v1/ingest/ndjson/{}",
-            config.endpoint(), table_name
+            config.endpoint(),
+            table_name
         ))
         .body(body)
         .send()
@@ -192,7 +211,7 @@ pub async fn handle_ingest(
         }
         false => {
             let api_error = response.json::<ApiError>().await?;
-             println!("ERROR: {:?} ", api_error);
+            println!("ERROR: {:?} ", api_error);
             // println!("ERROR: {} ", response.status());
             // eprintln!("Failed to ingest data: {}", api_error.error)
         }
@@ -200,11 +219,48 @@ pub async fn handle_ingest(
     Ok(())
 }
 
-pub async fn handle_query(
-    _config: QuartzConfig,
-    _table_name: &str,
+pub async fn handle_search(
+    config: QuartzConfig,
+    table_name: &str,
     query: &str,
 ) -> anyhow::Result<()> {
-    println!("Executing query: {}", query);
+    let search_request = SearchRequest {
+        query: query.to_string(),
+    };
+    let client = reqwest::Client::new();
+    let response = client
+        .post(format!(
+            "{}/api/v1/search/{}",
+            config.endpoint(),
+            table_name
+        ))
+        .json(&search_request)
+        .send()
+        .await?;
+    match response.status().is_success() {
+        true => {
+            // println!("{:?}", response.text().await);
+            let api_response = response.json::<ApiOk<serde_json::Value>>().await?;
+            let value = api_response.data.unwrap();
+            let error = value.as_object()
+                .unwrap()
+                .get("error");
+            if let Some(error) = error {
+                eprintln!("{}", error.as_str().unwrap());
+            } else {
+                let data = value.as_object()
+                    .unwrap()
+                    .get("data")
+                    .unwrap();
+                let batch = json_array_record_batch(data)?;
+                let formatted = pretty_format_batches(&vec![batch])?;
+                println!("{formatted}");
+            }
+        }
+        false => {
+            let api_error = response.json::<ApiError>().await?;
+            eprintln!("{}", api_error.to_string());
+        }
+    }
     Ok(())
 }

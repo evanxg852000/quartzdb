@@ -1,64 +1,53 @@
 use std::sync::Arc;
 
-use arrow_flight::{FlightDescriptor, client};
+use arrow_flight::FlightDescriptor;
 use arrow_flight::encode::FlightDataEncoderBuilder;
-// use common::proto::metastore_service_client::MetastoreServiceClient;
-use common::proto::{
-    DeleteTableRequest, DeleteTableResponse, GetTableRequest, GetTableResponse, ListTablesRequest,
-    ListTablesResponse, PutTableRequest, PutTableResponse,
-};
+use common::convert::{record_batch_from_bytes, record_batch_to_bytes};
+use common::proto::{PutRequest, SearchRequest};
+use common::proto::grpc_storer_service_client::GrpcStorerServiceClient;
+use datafusion::arrow::array::RecordBatch;
+use datafusion_distributed::WorkerServiceClient;
 use futures::StreamExt;
 use tokio::sync::Mutex;
 use tonic::transport::Channel;
-use tonic::{Request, Response, Status};
 
-use arrow_flight::flight_service_client::FlightServiceClient;
+use crate::service::StorerService;
 
-use crate::service::{StorerPutRequest, StorerQueryRequest, StorerService};
 
 pub struct GrpcClientStorerServiceImpl {
-    service_client: Arc<Mutex<FlightServiceClient<tonic::transport::Channel>>>,
+    service_client: Arc<Mutex<GrpcStorerServiceClient<Channel>>>,
 }
 
 impl GrpcClientStorerServiceImpl {
     pub async fn try_new(url: String) -> anyhow::Result<Self> {
-        let channel = Channel::from_shared(url)?
-            .connect()
-            .await?;
-        let client = FlightServiceClient::new(channel);
+        let channel = Channel::from_shared(url)?.connect().await?;
+        let service_client = GrpcStorerServiceClient::new(channel);
         Ok(Self {
-            service_client: Arc::new(Mutex::new(client)),
+            service_client: Arc::new(Mutex::new(service_client)),
         })
     }
 }
 
 #[tonic::async_trait]
 impl StorerService for GrpcClientStorerServiceImpl {
-    async fn put(&self, request: StorerPutRequest) -> anyhow::Result<()> {
-        println!("Received Put request: {:?}", request);
-        let StorerPutRequest{ info, data} = request;
-        let descriptor = FlightDescriptor::new_cmd("info".as_bytes());
-        let flight_data_stream = FlightDataEncoderBuilder::new()
-            .with_flight_descriptor(Some(descriptor))
-            .build(futures::stream::iter(vec![Ok::<_, arrow_flight::error::FlightError>(data)]))
-            .map(|result| result.unwrap());
-
-        let response = {
-            let mut client = self.service_client.lock().await;
-            client.do_put(flight_data_stream).await?
+    async fn put(&self, table_name: &str, record_batch: RecordBatch) -> anyhow::Result<()> {        
+        let request = PutRequest{
+            table_name: table_name.to_string(),
+            record_batch: record_batch_to_bytes(record_batch)?,
         };
-        let mut ack_stream = response.into_inner();
-        while let Some(ack) = ack_stream.next().await {
-            let put_result = ack?;
-            // The server can optionally send custom metadata back in the 'app_metadata' field
-            println!("Server acknowledged batch. Metadata len: {:?}", put_result.app_metadata.len());
-        }
+        let mut client = self.service_client.lock().await;
+        client.put(request).await?;
         Ok(())
     }
 
-    async fn query(&self, query: StorerQueryRequest) -> anyhow::Result<()> {
-        println!("Received Query request: {:?}", query);
-        //TODO: forward internal call to datafusion-distributed
-        Ok(())
+    async fn search(&self, table_name: &str, query: &str) -> anyhow::Result<RecordBatch> {
+        let request = SearchRequest{
+            table_name: table_name.to_string(),
+            query: query.to_string(),
+        };
+        let mut client = self.service_client.lock().await;
+        let response = client.search(request).await?;
+        let record_batch = record_batch_from_bytes(response.into_inner().record_batch)?;
+        Ok(record_batch)
     }
 }

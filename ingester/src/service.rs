@@ -2,12 +2,21 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use metastore::{client::MetastoreClient, events::{MetastoreEvent, MetastoreEventType, MetastoreEventsFetcher}};
+use metastore::{
+    client::MetastoreClient,
+    events::{MetastoreEvent, MetastoreEventType, MetastoreEventsFetcher},
+};
 use storage::{Storage, configs::StorageConfig};
-use storer::{client::StorerClient};
+use storer::client::StorerClient;
 use tokio::task::JoinHandle;
 
-use crate::{client::IngesterClient, commands::{IngesterCommand, IngesterMailbox}, configs::IngesterConfig, table_processor::ProcessingReport, table_processor_registry::TableProcessorRegistry};
+use crate::{
+    client::IngesterClient,
+    commands::{IngesterCommand, IngesterMailbox},
+    configs::IngesterConfig,
+    table_processor::ProcessingReport,
+    table_processor_registry::TableProcessorRegistry,
+};
 
 const INGESTER_DIR: &str = "ingester";
 
@@ -32,7 +41,15 @@ impl IngesterService {
         storer_client: StorerClient,
     ) -> Result<Self> {
         let storage = storage_config.derive(INGESTER_DIR, None).build().await?;
-        let table_processor_registry = Arc::new(TableProcessorRegistry::try_new(500, storage.clone(), storer_client.clone(), metastore_client.clone()).await?);
+        let table_processor_registry = Arc::new(
+            TableProcessorRegistry::try_new(
+                500,
+                storage.clone(),
+                storer_client.clone(),
+                metastore_client.clone(),
+            )
+            .await?,
+        );
         let metastore_events_fetcher = MetastoreEventsFetcher::new(metastore_client.clone());
         Ok(IngesterService {
             config: ingester_config.clone(),
@@ -50,7 +67,9 @@ impl IngesterService {
         let (command_tx, mut command_rx) = tokio::sync::mpsc::channel(500);
         self.mailbox = Some(command_tx.clone());
 
-        self.metastore_events_fetcher.start(std::time::Duration::from_secs(5)).await?;
+        self.metastore_events_fetcher
+            .start(std::time::Duration::from_secs(5))
+            .await?;
         let mut metastore_events_stream = self.metastore_events_fetcher.subscribe_to_events();
 
         let processors_registry = self.table_processor_registry.clone();
@@ -101,7 +120,8 @@ async fn handle_other_commands(
                 let processor = table_processor_registry.get_processor(&table_name).await?;
                 let report = processor.process_batch(batch, policy).await?;
                 Ok(report)
-            }.await;
+            }
+            .await;
             let report = match response {
                 Ok(report) => report,
                 Err(err) => ProcessingReport::from_error(&err),

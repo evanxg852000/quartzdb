@@ -1,8 +1,8 @@
 use std::{fmt::Debug, sync::Arc};
 
+use crate::{events::MetastoreEvent, service::MetastoreService};
 use anyhow::Result;
 use common::catalog::SplitMeta;
-use crate::{events::MetastoreEvent, service::MetastoreService};
 
 #[derive(Clone)]
 pub struct MetastoreClient {
@@ -17,8 +17,7 @@ impl MetastoreClient {
 
 impl Debug for MetastoreClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MetastoreClient")
-            .finish_non_exhaustive()
+        f.debug_struct("MetastoreClient").finish_non_exhaustive()
     }
 }
 
@@ -48,5 +47,3 @@ impl MetastoreService for MetastoreClient {
         self.inner.put_split(split_meta).await
     }
 }
-
-

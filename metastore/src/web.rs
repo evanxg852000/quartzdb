@@ -1,20 +1,24 @@
-use crate::{
-    client::MetastoreClient, service::MetastoreService,
-};
+use crate::{client::MetastoreClient, service::MetastoreService};
 use axum::{
     Json, Router,
     extract::{Path, State},
     http::StatusCode,
     routing::{delete, get, put},
 };
-use common::{catalog::TableMeta, models::{ApiError, ApiOk, ApiResponse}};
+use common::{
+    catalog::TableMeta,
+    models::{ApiError, ApiOk, ApiResponse},
+};
 
-pub (crate) fn setup_http_routes(metastore_client: MetastoreClient) -> Router {
+pub(crate) fn setup_http_routes(metastore_client: MetastoreClient) -> Router {
     Router::new()
         .route("/metastore/tables", get(handle_list_tables))
         .route("/metastore/tables", put(handle_put_table))
         .route("/metastore/tables/{table_name}", get(handle_get_table))
-        .route("/metastore/tables/{table_name}", delete(handle_delete_table))
+        .route(
+            "/metastore/tables/{table_name}",
+            delete(handle_delete_table),
+        )
         .with_state(metastore_client)
 }
 

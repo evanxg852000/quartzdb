@@ -9,13 +9,12 @@ use tantivy::schema::{self as tantivy_schema};
 
 use crate::catalog::{FieldConfig, FieldType, FieldValue, TableConfig};
 
-pub const QUARTZDB_ROW_INDEX_FIELD_NAME: &'static str = "__qtz_index";
+pub const QUARTZDB_ROW_ID_FIELD_NAME: &'static str = "__qtz_id";
 pub const QUARTZDB_LABELS_FIELD_NAME: &'static str = "__qtz_labels";
 pub const QUARTZDB_TIMESTAMP_FIELD_NAME: &'static str = "__qtz_timestamp";
 pub const QUARTZDB_SOURCE_FIELD_NAME: &'static str = "__qtz_source";
 
-//TODO: Future
-// add support for lance format
+// TODO: add support for lance format
 // https://docs.rs/lance/latest/lance/
 
 pub struct Schema {}
@@ -24,6 +23,11 @@ impl Schema {
     pub fn get_primary_schema(table_config: &TableConfig) -> Arc<datafusion_schema::Schema> {
         let capacity = table_config.fields.len() + 3;
         let mut fields = Vec::with_capacity(capacity);
+        fields.push(datafusion_schema::Field::new(
+            QUARTZDB_ROW_ID_FIELD_NAME,
+            datafusion_schema::DataType::UInt64,
+            false,
+        ));
         fields.push(datafusion_schema::Field::new(
             QUARTZDB_TIMESTAMP_FIELD_NAME,
             datafusion_schema::DataType::Timestamp(
@@ -34,7 +38,7 @@ impl Schema {
         ));
         fields.push(datafusion_schema::Field::new(
             QUARTZDB_SOURCE_FIELD_NAME,
-            datafusion_schema::DataType::LargeUtf8,
+            datafusion_schema::DataType::Utf8View,
             false,
         ));
 
@@ -44,7 +48,7 @@ impl Schema {
                 FieldType::Int => datafusion_schema::DataType::Int64,
                 FieldType::Float => datafusion_schema::DataType::Float64,
                 FieldType::Bool => datafusion_schema::DataType::Boolean,
-                FieldType::String => datafusion_schema::DataType::Utf8,
+                FieldType::String => datafusion_schema::DataType::Utf8View,
             };
             let arrow_field = datafusion_schema::Field::new(field.name.as_str(), arrow_type, true);
             fields.push(arrow_field);
@@ -57,7 +61,7 @@ impl Schema {
 
         // row_id field
         schema_builder.add_u64_field(
-            QUARTZDB_ROW_INDEX_FIELD_NAME,
+            QUARTZDB_ROW_ID_FIELD_NAME,
             tantivy_schema::INDEXED | tantivy_schema::FAST,
         );
 

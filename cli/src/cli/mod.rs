@@ -24,7 +24,7 @@ pub enum Commands {
         #[arg(short, long)]
         file: PathBuf,
     },
-    Query {
+    Search {
         #[arg(short, long)]
         name: String,
         #[arg(short, long)]
@@ -88,14 +88,12 @@ pub async fn run_cli() -> anyhow::Result<()> {
         Some(Commands::Ingest { name, file }) => {
             handlers::handle_ingest(config, &name, file).await?
         }
-        Some(Commands::Query { name, query }) => {
-            handlers::handle_query(config, &name, &query).await?
+        Some(Commands::Search { name, query }) => {
+            handlers::handle_search(config, &name, &query).await?
         }
         Some(Commands::Table { action }) => match action {
             TableSubcommands::List => handlers::handle_table_list(config).await?,
-            TableSubcommands::Put { file } => {
-                handlers::handle_table_put(config, file).await?
-            }
+            TableSubcommands::Put { file } => handlers::handle_table_put(config, file).await?,
             TableSubcommands::Delete { name } => {
                 handlers::handle_table_delete(config, &name).await?
             }

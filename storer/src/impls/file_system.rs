@@ -1,32 +1,42 @@
 use std::sync::Arc;
 
-use storage::Storage;
+use anyhow::Result;
+use datafusion::arrow::array::RecordBatch;
 
-use crate::{service::{StorerPutRequest, StorerPutRequestInfo, StorerQueryRequest, StorerService}, table_processor_registry::TableProcessorRegistry};
-
+use crate::{
+    service::StorerService,
+    table_processor_registry::TableProcessorRegistry,
+};
 
 pub struct FileSystemStorerServiceImpl {
-    // storage: Arc<dyn Storage>,
-    table_processor_registry: Arc<TableProcessorRegistry>
+    table_processor_registry: Arc<TableProcessorRegistry>,
 }
 
 impl FileSystemStorerServiceImpl {
     pub fn new(table_processor_registry: Arc<TableProcessorRegistry>) -> Self {
-        Self { table_processor_registry }
+        Self {
+            table_processor_registry,
+        }
     }
 }
 
 #[tonic::async_trait]
 impl StorerService for FileSystemStorerServiceImpl {
-    async fn put(&self, request: StorerPutRequest) -> anyhow::Result<()> {
-        let StorerPutRequest{info: StorerPutRequestInfo{ table_name}, data} = request;
-        let processor = self.table_processor_registry.get_processor(&table_name).await?;
-        processor.process_batch(data).await?;
+    async fn put(&self, table_name: &str, record_batch: RecordBatch) -> Result<()> {
+        let processor = self
+            .table_processor_registry
+            .get_processor(&table_name)
+            .await?;
+        processor.put(record_batch).await?;
         Ok(())
     }
 
-    async fn query(&self, query: StorerQueryRequest) -> anyhow::Result<()> {
-        println!("Received Query request: {:?}", query);
-        Ok(())
+    async fn search(&self, table_name: &str, query: &str) -> Result<RecordBatch> {
+        let processor = self
+            .table_processor_registry
+            .get_processor(&table_name)
+            .await?;
+        let record_batch = processor.search(&query).await?;
+        Ok(record_batch)
     }
 }

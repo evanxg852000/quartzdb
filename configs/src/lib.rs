@@ -1,15 +1,11 @@
 use std::net::SocketAddr;
 
 use ingester::configs::IngesterConfig;
+use metastore::config::MetastoreConfig;
+use searcher::configs::SearcherConfig;
 use serde::{Deserialize, Serialize};
 use storage::configs::StorageConfig;
-use metastore::config::MetastoreConfig;
 use storer::configs::StorerConfig;
-
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct SearcherConfig {
-    pub enable: bool,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QuartzConfig {
@@ -22,7 +18,6 @@ pub struct QuartzConfig {
     pub ingester: IngesterConfig,
     pub searcher: SearcherConfig,
 }
-
 
 impl Default for QuartzConfig {
     fn default() -> Self {
@@ -38,7 +33,6 @@ impl Default for QuartzConfig {
         }
     }
 }
-
 
 impl QuartzConfig {
     pub fn http_address(&self) -> SocketAddr {

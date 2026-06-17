@@ -143,7 +143,7 @@ fn process_batch(
 
     let record_batch = RecordBatch::try_new(
         Arc::new(DataFusionSchema::new(vec![
-            Field::new(SOURCE_COLUMN_NAME, DataType::Utf8, false),
+            Field::new(SOURCE_COLUMN_NAME, DataType::Utf8View, false),
         ])),
         vec![Arc::new(document_source_array_builder.finish())],
     )?;

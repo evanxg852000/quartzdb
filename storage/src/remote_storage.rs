@@ -66,10 +66,7 @@ impl Storage for RemoteStorage {
     // }
 
     async fn put(&self, to: &str, data: Bytes) -> io::Result<()> {
-        tokio::try_join!(
-            self.local.put(to, data.clone()), 
-            self.remote.put(to, data),
-        )?;
+        tokio::try_join!(self.local.put(to, data.clone()), self.remote.put(to, data),)?;
         Ok(())
     }
 

@@ -1,7 +1,9 @@
 use tokio::sync::{mpsc, oneshot};
 
-use crate::{table_processor::{BatchProcessorPolicy, ProcessingReport}, document::IngestBatch};
-
+use crate::{
+    document::IngestBatch,
+    table_processor::{BatchProcessorPolicy, ProcessingReport},
+};
 
 pub type IngesterMailbox = mpsc::Sender<IngesterCommand>;
 

@@ -1,8 +1,10 @@
 use anyhow::Result;
-use common::{catalog::{FieldValue, TableConfig}, schema::Schema};
+use common::{
+    catalog::{FieldValue, TableConfig},
+    schema::Schema,
+};
 use datafusion::arrow::array::{Array, RecordBatch, StringArray};
 use serde_json::Value as JsonValue;
-
 
 #[derive(Debug)]
 pub struct StorerDocument {
@@ -41,14 +43,15 @@ impl StorerDocument {
         let values = Schema::extract_field_values(table_config, &parsed_document)?;
         let labels = Schema::extract_label_values_as_object(table_config, &parsed_document)?;
         let tags = Schema::extract_tag_values(table_config, &parsed_document)?;
-        Ok(Self::new(timestamp, source.to_string(), values, labels, tags))
+        Ok(Self::new(
+            timestamp,
+            source.to_string(),
+            values,
+            labels,
+            tags,
+        ))
     }
-
-
 }
-
-
-
 
 #[derive(Debug)]
 pub struct StorerBatch {
@@ -57,7 +60,7 @@ pub struct StorerBatch {
 
 impl StorerBatch {
     pub fn new() -> Self {
-        Self {documents: vec![]}
+        Self { documents: vec![] }
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
@@ -65,7 +68,7 @@ impl StorerBatch {
             documents: Vec::with_capacity(capacity),
         }
     }
-    
+
     pub fn try_from_record_batch(table_config: &TableConfig, batch: RecordBatch) -> Result<Self> {
         let source_doc_array = batch
             .column(0)
@@ -74,8 +77,8 @@ impl StorerBatch {
             .ok_or_else(|| anyhow::anyhow!("expected first column to be"))?;
         let mut batch = StorerBatch::with_capacity(source_doc_array.len());
         for source_doc_opt in source_doc_array {
-            let source_doc = source_doc_opt
-                .ok_or_else(|| anyhow::anyhow!("source cannot be null"))?;
+            let source_doc =
+                source_doc_opt.ok_or_else(|| anyhow::anyhow!("source cannot be null"))?;
             let document = StorerDocument::try_from_json_str(table_config, source_doc)?;
             batch.add_document(document);
         }

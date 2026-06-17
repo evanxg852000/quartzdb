@@ -1,4 +1,5 @@
-use serde::{Serialize, Deserialize};
+use hrw_hash::HrwNode;
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -123,14 +124,12 @@ impl FieldValue {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct FieldConfig {
     pub name: FieldName,
     #[serde(rename = "type")]
     pub field_type: FieldType,
 }
-
 
 #[derive(Debug, Default, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct TableConfig {
@@ -177,10 +176,33 @@ pub struct TableMeta {
     pub settings: TableSettings,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SplitMeta {
     pub split_id: String,
     pub table_name: String,
     pub min_timestamp: i64,
     pub max_timestamp: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct NodeInfo {
+    pub id: String,
+    pub address: String,
+    pub capacity: usize
+}
+
+impl NodeInfo {
+    pub fn new(id: String, address: String) -> Self {
+        Self::with_capacity(id, address, 1)
+    }
+
+    pub fn with_capacity(id: String, address: String, capacity: usize) -> Self {
+        Self { id, address, capacity }
+    }
+}
+
+impl HrwNode for NodeInfo {
+    fn capacity(&self) -> usize {
+        self.capacity
+    }
 }
